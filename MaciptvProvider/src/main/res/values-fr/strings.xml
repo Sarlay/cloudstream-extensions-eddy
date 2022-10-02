@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="nginx_info_summary">Maciptv est un emulateur qui va vous permettre de profiter de vos comptes IPTV grace à l'adresse mac de votre boxIptv et du portail de votre fournisseur IPTV</string>
+    <string name="nginx_info_summary">Maciptv est un emulateur qui va vous permettre de profiter de vos comptes IPTV grace à l\'adresse mac de votre boxIptv et du portail de votre fournisseur IPTV</string>
     <string name="nginx_url_pref">Addresse du serveur IPTV</string>
-
 </resources>
