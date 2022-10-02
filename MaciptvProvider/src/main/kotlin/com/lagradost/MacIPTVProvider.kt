@@ -13,7 +13,7 @@ import java.lang.Math.ceil
 
 class MacIPTVProvider : MainAPI() {
     private val defaulmac_adresse = "mac=00:1A:79:6C:CD:C8"//"mac=00:1A:79:A7:9E:ED" //mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
-    private val defaultmainUrl = "http://ultra-box.club/"//"http://matrix-ott.tv:8080"
+    private val defaultmainUrl = "http://ultra-box.club"//"http://matrix-ott.tv:8080"
     override var name = "BoxIPTV"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
@@ -27,10 +27,10 @@ class MacIPTVProvider : MainAPI() {
     }
 
     private fun getAuthHeader(): Map<String, String> {
-        val url = overrideUrl ?: defaultmainUrl
+        val url = overrideUrl ?: "http://ultra-box.club"
         mainUrl = url
         if (mainUrl == "NONE" || mainUrl.isBlank()) {
-            mainUrl = defaultmainUrl
+            mainUrl = "http://ultra-box.club"
         }
 
         val localCredentials = loginMac
