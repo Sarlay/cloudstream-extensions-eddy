@@ -12,7 +12,7 @@ cloudstream {
     language = "fr"
     // All of these properties are optional, you can safely remove them
 
-    description = "IPTV avec Bein Sport RMC Sport ... Je vous laisse découvrir"
+    description = "Ajoutez votre compte IPTV ou bien à défaut, le compte automatique vous permettra de vivre en Live vos émissions Tv des groupes Bein, RMC, Canal ..."
     authors = listOf("Eddy")
 
     /**

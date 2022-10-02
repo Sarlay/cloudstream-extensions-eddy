@@ -27,10 +27,10 @@ class MacIPTVProvider : MainAPI() {
     }
 
     private fun getAuthHeader(): Map<String, String> {
-        val url = overrideUrl ?: "http://ultra-box.club"
+        val url = overrideUrl ?: defaultmainUrl
         mainUrl = url
         if (mainUrl == "NONE" || mainUrl.isBlank()) {
-            mainUrl = "http://ultra-box.club"
+            mainUrl = defaultmainUrl
         }
 
         val localCredentials = loginMac
