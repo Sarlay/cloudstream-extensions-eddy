@@ -12,8 +12,8 @@ import java.lang.Math.ceil
 
 
 class MacIPTVProvider : MainAPI() {
-    private val defaulmac_adresse = "mac=00:1A:79:6C:CD:C8"//"mac=00:1A:79:A7:9E:ED" //mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
-    private val defaultmainUrl = "http://ultra-box.club"//"http://matrix-ott.tv:8080"
+    private val defaulmac_adresse = "mac=00:1A:79:A7:9E:ED"//"mac=00:1A:79:A7:9E:ED" //mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
+    private val defaultmainUrl = "http://matrix-ott.tv:8080"//"http://ultra-box.club"
     override var name = "BoxIPTV"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
@@ -178,8 +178,8 @@ class MacIPTVProvider : MainAPI() {
                     if (a.take(4).contains(b_new) && media.tv_genre_id == channel.tv_genre_id) {
                         val epg_url =
                             "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${channel.ch_id}&size=10&JsHttpRequest=1-xml" // descriptif
-                        var response = app.get(epg_url, headers = header)
-                        var description = getEpg(response.text)
+                        var response0 = app.get(epg_url, headers = header)
+                        var descript = getEpg(response0.text)
                         val streamurl = channel.url
                         val channelname = channel.title
                         val posterurl = channel.url_image.toString()
@@ -191,7 +191,7 @@ class MacIPTVProvider : MainAPI() {
                                 null,
                                 posterurl,
                                 null,
-                                description
+                                descript
                             )
                         )
                     }
@@ -207,7 +207,7 @@ class MacIPTVProvider : MainAPI() {
                 title,
                 url,
                 this.name,
-                TvType.Live,
+                TvType.TvSeries,
                 showlist,
                 posterUrl
             )
@@ -242,7 +242,7 @@ class MacIPTVProvider : MainAPI() {
                     val TokenLink =
                         "$mainUrl/portal.php?type=itv&action=create_link&cmd=ffmpeg%20http://localhost/ch/$chID&series=&forced_storage=0&disable_ad=0&download=0&force_ch_link_check=0&JsHttpRequest=1-xml"
 
-                    var link = ""
+                    var link: String
                     runBlocking {
                         val header = getAuthHeader()
                         val getTokenLink = app.get(TokenLink, headers = header).text
