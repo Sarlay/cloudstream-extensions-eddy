@@ -140,13 +140,14 @@ class NekosamaProvider : MainAPI() {
 
                 when (type) {
                     "m0v1e", "special" -> (
-                            listofResults.add(newMovieSearchResponse( // réponse du film qui sera ajoutée à la liste apmap qui sera ensuite return
+                            listofResults.add(newAnimeSearchResponse( // réponse du film qui sera ajoutée à la liste apmap qui sera ensuite return
                                 title,
                                 href,
                                 TvType.AnimeMovie,
                                 false
                             ) {
                                 this.posterUrl = mediaPoster
+                                this.dubStatus = EnumSet.of(dubStatus)
                             }
                             ))
                     null, "tv", "ova", "" -> (
@@ -392,13 +393,14 @@ class NekosamaProvider : MainAPI() {
 
         } else  // a movie
         {
-            return newMovieSearchResponse(
+            return newAnimeSearchResponse(
                 title,
                 link,
                 TvType.AnimeMovie,
                 false,
             ) {
                 this.posterUrl = posterUrl
+                this.dubStatus = EnumSet.of(dubStatus)
             }
         }
     }
