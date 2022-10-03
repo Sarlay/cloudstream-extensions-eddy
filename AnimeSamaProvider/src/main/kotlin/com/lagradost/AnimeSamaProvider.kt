@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
 import java.util.*
 
 class AnimeSamaProvider : MainAPI() {
@@ -85,11 +86,151 @@ class AnimeSamaProvider : MainAPI() {
      * charge la page d'informations, il ya toutes les donées, les épisodes, le résumé etc ...
      * Il faut retourner soit: AnimeLoadResponse, MovieLoadResponse, TorrentLoadResponse, TvSeriesLoadResponse.
      */
+    private data class ResultsForLoop(
+        var episode_tite: String, // increment for selecting the next idxEndForLoop
+        var epNo: Int?
+    )
+
+    private data class DataForLoop(
+
+        var idx_EpSpec: Int, // increment special episode number
+        var idx_Ep: Int, // Start loop at episode idx_Ep (nextIdxBeginLoop)
+        var idBeginLoop: Int, // Increment for selecting the next idx_Ep
+        var idxEndForLoop: Int, // End loop at episode idxEndForLoop
+        var idEndLoop: Int, // increment for selecting the next idxEndForLoop
+        var nbrEpSpec: Int,
+        var results: ResultsForLoop,
+
+        )
+
+    private data class DataSet(
+        val isTitleEp: Boolean,
+        val all_title: Elements,
+        val nbrBeginloop: Int, // number of (begin for loop i = N) found by regex
+        val nbrEndloop: Int, // number of (end for loop i <= N) found by regex
+        val allstartForLoop: Sequence<MatchResult>,
+        val allEndForLoop: Sequence<MatchResult>,
+    )
+
+    private suspend fun findPosterfromEmbedUrl(link_video: String): String {
+        var openlink: String
+        var link_poster: String
+        when (!link_video.isNullOrBlank()) {
+            link_video.contains("video.sibnet") -> {
+                openlink = Regex("""[^']*video\.sibnet[^']*""").find(
+                    link_video
+                )?.groupValues?.get(0).toString()
+                link_poster = app.get(
+                    openlink
+                ).document.select("[property=og:image]")
+                    .attr("content")
+            }
+            link_video.contains("sendvid") -> {
+                openlink = Regex("""[^']*sendvid[^']*""").find(
+                    link_video
+                )?.groupValues?.get(0).toString()
+                link_poster = app.get(
+                    openlink
+                ).document.select("[property=og:image]")
+                    .attr("content")
+            }
+            link_video.contains("myvi.top") -> {
+                openlink =
+                    Regex("""[^']*myvi\.top[^']*""").find(link_video)?.groupValues?.get(
+                        0
+                    ).toString()
+
+                link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
+                    app.get(openlink).text
+                )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
+                    .replace("%3f", "?").replace("%3d", "=").replace("%26", "&")
+            }
+
+            link_video.contains("myvi.ru") -> {
+                openlink =
+                    Regex("""[^']*myvi\.ru[^']*""").find(link_video)?.groupValues?.get(
+                        0
+                    ).toString()
+                link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
+                    app.get(openlink).text
+                )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
+                    .replace("%3f", "?").replace("%3d", "=").replace("%26", "&")
+            }
+
+            else -> link_poster = ""
+        }
+        return link_poster
+    }
+
+    private fun loopLookingforEpisodeTitle(dataLoop: DataForLoop, dataset: DataSet): DataForLoop {
+        var episode_tite: String
+        var epNo: Int?
+        var results = ResultsForLoop("", null)
+        var idx_Ep = dataLoop.idx_Ep
+        var idxEndForLoop = dataLoop.idxEndForLoop
+        var idBeginLoop = dataLoop.idBeginLoop
+        var nbrEpSpec = dataLoop.nbrEpSpec
+        val nbrBeginloop = dataset.nbrBeginloop
+        var idEndLoop = dataLoop.idEndLoop
+        var idx_EpSpec = dataLoop.idx_EpSpec
+        var nextidxEndForLoop: Int
+        var nextIdxBeginLoop: Int
+        if (dataset.isTitleEp) {
+            episode_tite =
+                dataset.all_title[idx_Ep - 1].text()//
+            idx_Ep++
+            epNo = null
+        } else {
+            if ((idx_Ep > idxEndForLoop || nbrEpSpec > 1) && (idBeginLoop + 1) < nbrBeginloop) {
+                if (dataLoop.idx_Ep > dataLoop.idxEndForLoop) {
+                    idBeginLoop++
+
+
+                    nextIdxBeginLoop =
+                        dataset.allstartForLoop.elementAt(idBeginLoop).groupValues.get(1).toInt()
+                    idx_Ep = nextIdxBeginLoop
+
+                    nbrEpSpec = nextIdxBeginLoop - idxEndForLoop
+                    if ((idEndLoop + 1) < dataset.nbrEndloop) {
+                        idEndLoop++
+                        nextidxEndForLoop =
+                            dataset.allEndForLoop.elementAt(idEndLoop).groupValues.get(1).toInt()
+                    } else {
+                        nextidxEndForLoop = 150000 // end
+                    }
+
+                    idxEndForLoop = nextidxEndForLoop
+                }
+
+                episode_tite = "Episode Special $idx_EpSpec"
+                epNo = null
+                idx_EpSpec++
+                nbrEpSpec--
+            } else {
+                episode_tite = "Episode $idx_Ep"
+                epNo = idx_Ep
+                idx_Ep++
+            }
+        }
+        results.episode_tite = episode_tite
+        results.epNo = epNo
+        return DataForLoop(
+            idx_EpSpec, // increment special episode number
+            idx_Ep, // Start loop at episode idx_Ep (nextIdxBeginLoop)
+            idBeginLoop, // Increment for selecting the next idx_Ep
+            idxEndForLoop, // End loop at episode idxEndForLoop
+            idEndLoop, // increment for selecting the next idxEndForLoop
+            nbrEpSpec,
+            results
+        )
+        //}
+    }
+
     private val regexAllcontentEpisode =
         Regex("""\[[^\]]*]""")
     private val regexAllLinkepisode = Regex("""'[^']*',""")
     private val regexCreateEp =
-        Regex("""for[\s]+\(var[\s]+i[\s]+=[\s]+([0-9]+)[\s]*;""") //for[\s]+\(var[\s]+i[\s]+=[\s]+([0-9]+)[\s]*;
+        Regex("""for[\s]+\(var[\s]+i[\s]+=[\s]+([0-9]+)[\s]*;""")
     private val regexgetLoopEnd = Regex("""i[\s]*<=[\s]*([0-9]+)""")
     override suspend fun load(url: String): LoadResponse {
         val episodes = ArrayList<Episode>()
@@ -116,49 +257,10 @@ class AnimeSamaProvider : MainAPI() {
         val resultsAllContent = regexAllcontentEpisode.findAll(script)
         //////////////////////////////////////
         /////////////////////////////////////
-        var idx_Ep = 0
-        var idx_Epfirstcontent = 0
-        var firstcontent = true
-        var oldNbrContent = 0
+        var idx_EpStart: Int
         var link_poster = ""
-        var openlink: String
-        var link_scpt: String
-        resultsAllContent.forEach { content_i ->
-            val contentEpisodeLink = content_i.groupValues[0]
-            val AllLinkEpisodeFromContent_i = regexAllLinkepisode.findAll(contentEpisodeLink)
-            //AllLinkEpisodeFromContent_i.elementAt(0)
-            val nbr_Ep = AllLinkEpisodeFromContent_i.count()
-            AllLinkEpisodeFromContent_i.forEach { link ->
-                // first content
-
-                if (firstcontent && idx_Epfirstcontent < nbr_Ep) {
-                    oldNbrContent = nbr_Ep
-                    link_scpt = link.groupValues[0]
-                    episodesLink.add(link_scpt)
-                } else {
-                    firstcontent = false
-                    if (nbr_Ep > oldNbrContent && idx_Ep >= oldNbrContent) {
-                        link_scpt = link.groupValues[0]
-                        episodesLink.add(link_scpt)
-
-                    } else {
-
-                        link_scpt = link.groupValues[0]
-                        episodesLink[idx_Ep] = episodesLink[idx_Ep] + link_scpt
-                    }
-                    idx_Ep++
-                }
-
-                idx_Epfirstcontent++
-                if (idx_Ep > (nbr_Ep - 1)) { // init idx_Ep
-                    idx_Ep = 0
-                }
-
-
-            }
-
-        }
-        var episode_tite: String
+        ///////////////////////////////////
+        /////////////////////////////////
 
 
         val title =
@@ -174,117 +276,89 @@ class AnimeSamaProvider : MainAPI() {
         var nbrEndloop: Int // number of end for loop found
         var nbrBeginloop: Int // number of begin for loop found
         try {
-            idx_Ep = allstartForLoop.elementAt(idBeginLoop).groupValues.get(1).toInt()
+            idx_EpStart = allstartForLoop.elementAt(idBeginLoop).groupValues.get(1).toInt()
             idxEndForLoop = allEndForLoop.elementAt(idEndLoop).groupValues.get(1).toInt()
             nbrEndloop = allEndForLoop.count()
             nbrBeginloop = allstartForLoop.count()
         } catch (e: Exception) {
-            idx_Ep = 1
+            idx_EpStart = 1
             idxEndForLoop = 1
             nbrEndloop = 0
             nbrBeginloop = 0
         }
         var idx_EpSpec = 1
-        var nextIdxBeginLoop: Int
-        var nextidxEndForLoop: Int
         var nbrEpSpec = 0
-        var epNo: Int?
+        var results = ResultsForLoop("", null)
+        // the site use a for loop and add by hand special episode ! so we have to detect when an episode is added by hand
+        var dataLoop = DataForLoop(
+            idx_EpSpec, // increment special episode number
+            idx_EpStart, // Start loop at episode idx_Ep (nextIdxBeginLoop)
+            idBeginLoop, // Increment for selecting the next idx_Ep
+            idxEndForLoop, // End loop at episode idxEndForLoop
+            idEndLoop, // increment for selecting the next idxEndForLoop
+            nbrEpSpec,
+            results
+        )
+        val dataset = DataSet(
+            // the site use a for loop and add by hand episode ! so we have to detect when an episode is added by hand
+            isTitleEp,
+            all_title,
+            nbrBeginloop, // number of (begin for loop i = N) found by regex
+            nbrEndloop, // number of (end for loop i <= N) found by regex
+            allstartForLoop,
+            allEndForLoop,
+        )
+        val allcontentSize = resultsAllContent.count()
+        var line = 0
+        var maxEpisode = 1
+        var indexContent = 0
+        var alreadyConcatNlink = false
+        var countconcat = 1
+        var groupurl: String
 
 
-        episodesLink.forEach { link_video ->
-            if (isTitleEp) {
-                episode_tite = all_title[idx_Ep - 1].text()
-                idx_Ep++
-                epNo = null
-            } else {
-                if ((idx_Ep > idxEndForLoop || nbrEpSpec > 1) && (idBeginLoop + 1) < nbrBeginloop) {
-                    if (idx_Ep > idxEndForLoop) {
-                        idBeginLoop++
+        while (line < maxEpisode) {
+            val contentEpisodeLink = resultsAllContent.elementAt(indexContent).groupValues[0]
+            val AllLinkEpisodeFromContent_i = regexAllLinkepisode.findAll(contentEpisodeLink)
+            val nbr_Ep = AllLinkEpisodeFromContent_i.count()
+            if (nbr_Ep > maxEpisode) { // update maxEpisode found
+                maxEpisode = nbr_Ep
+            }
+            if (line < nbr_Ep) {
+                val urlatline = AllLinkEpisodeFromContent_i.elementAt(line).groupValues[0]
 
-
-                        nextIdxBeginLoop =
-                            allstartForLoop.elementAt(idBeginLoop).groupValues.get(1).toInt()
-                        idx_Ep = nextIdxBeginLoop
-
-                        nbrEpSpec = nextIdxBeginLoop - idxEndForLoop
-                        if ((idEndLoop + 1) < nbrEndloop) {
-                            idEndLoop++
-                            nextidxEndForLoop =
-                                allEndForLoop.elementAt(idEndLoop).groupValues.get(1).toInt()
-                        } else {
-                            nextidxEndForLoop = episodesLink.size // end
-                        }
-
-                        idxEndForLoop = nextidxEndForLoop
+                if (indexContent == 0 || alreadyConcatNlink) {
+                    alreadyConcatNlink = false
+                    episodesLink.add(urlatline)
+                    countconcat = 1
+                } else {
+                    episodesLink[line] = episodesLink[line] + urlatline
+                    countconcat++
+                    if (countconcat == allcontentSize) {
+                        alreadyConcatNlink = true
                     }
 
-                    episode_tite = "Episode Special $idx_EpSpec"
-                    epNo = null
-                    idx_EpSpec++
-                    nbrEpSpec--
-                } else {
-                    episode_tite = "Episode $idx_Ep"
-                    epNo = idx_Ep
-                    idx_Ep++
                 }
-            } //
-
-            when (!link_video.isNullOrBlank()) {
-                link_video.contains("video.sibnet") -> {
-                    openlink = Regex("""[^']*video\.sibnet[^']*""").find(
-                        link_video
-                    )?.groupValues?.get(0).toString()
-                    link_poster = app.get(
-                        openlink
-                    ).document.select("[property=og:image]")
-                        .attr("content")
-                }
-                link_video.contains("sendvid") -> {
-                    openlink = Regex("""[^']*sendvid[^']*""").find(
-                        link_video
-                    )?.groupValues?.get(0).toString()
-                    link_poster = app.get(
-                        openlink
-                    ).document.select("[property=og:image]")
-                        .attr("content")
-                }
-                link_video.contains("myvi.top") -> {
-                    openlink =
-                        Regex("""[^']*myvi\.top[^']*""").find(link_video)?.groupValues?.get(
-                            0
-                        ).toString()
-
-                    link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
-                        app.get(openlink).text
-                    )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
-                        .replace("%3f", "?").replace("%3d", "=").replace("%26", "&")
-                }
-
-                link_video.contains("myvi.ru") -> {
-                    openlink =
-                        Regex("""[^']*myvi\.ru[^']*""").find(link_video)?.groupValues?.get(
-                            0
-                        ).toString()
-                    link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
-                        app.get(openlink).text
-                    )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
-                        .replace("%3f", "?").replace("%3d", "=").replace("%26", "&")
-                }
-
-                else -> openlink = ""
+            }
+            if (indexContent == allcontentSize - 1) {
+                indexContent = 0
+                dataLoop = loopLookingforEpisodeTitle(dataLoop, dataset)
+                groupurl = episodesLink[line]
+                link_poster = findPosterfromEmbedUrl(groupurl)
+                episodes.add(
+                    Episode(
+                        data = groupurl,
+                        episode = dataLoop.results.epNo,
+                        name = dataLoop.results.episode_tite,
+                        posterUrl = link_poster
+                    )
+                )
+                line++
+            } else {
+                indexContent++
             }
 
-            episodes.add(
-                Episode(
-                    data = link_video,
-                    episode = epNo,
-                    name = episode_tite,
-                    posterUrl = link_poster
-                )
-            )
-
         }
-
 
         val description = documentBack.select("div.carousel-caption > p")[0].text()
         val poster = documentBack.select("img.d-block.w-100")[0].attr("src")
@@ -379,9 +453,7 @@ class AnimeSamaProvider : MainAPI() {
                 isVostfr = true
 
                 findAllNumber.findAll(text).forEach { number ->
-                    //if (number.toString().length < 3) {
                     newSumVost += number.groupValues[1].toInt()
-                    //}
 
                 }
                 if (newSumVost >= sumVost) {
@@ -394,9 +466,7 @@ class AnimeSamaProvider : MainAPI() {
             } else if (!isVostfr && detect_anime_fr) {
                 isFR = true
                 findAllNumber.findAll(text).forEach { number ->
-                    // if (number.toString().length < 3) {
                     newSum += number.groupValues[1].toInt()
-                    // }
                 }
                 if (newSum >= sum) {
                     sum = newSum
