@@ -3,6 +3,7 @@ package com.lagradost
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import org.jsoup.nodes.Element
 import java.util.*
 
@@ -21,15 +22,15 @@ class AnimeSamaProvider : MainAPI() {
     La recherche retourne une SearchResponse, qui peut être des classes suivants: AnimeSearchResponse, MovieSearchResponse, TorrentSearchResponse, TvSeriesSearchResponse
     Chaque classes nécessite des données différentes, mais a en commun le nom, le poster et l'url
      **/
-    val allresultshome = ArrayList<SearchResponse>()
+    val allresultshome: MutableList<SearchResponse> = mutableListOf()
     override suspend fun search(query: String): List<SearchResponse> {
-        allresultshome.clear()
+
         val link =
             "$mainUrl/search/search.php?terme=$query&s=Search" // search'
         val document =
             app.get(link).document // app.get() permet de télécharger la page html avec une requete HTTP (get)
         val results = document.select("div.search_text > div.bd-highlight")
-
+        allresultshome.clear()
         results.apmap { article ->  // avec mapnotnull si un élément est null, il sera automatiquement enlevé de la liste
             article.toSearchResponse1()
         }
@@ -121,6 +122,7 @@ class AnimeSamaProvider : MainAPI() {
         var oldNbrContent = 0
         var link_poster = ""
         var openlink: String
+        var link_scpt: String
         resultsAllContent.forEach { content_i ->
             val contentEpisodeLink = content_i.groupValues[0]
             val AllLinkEpisodeFromContent_i = regexAllLinkepisode.findAll(contentEpisodeLink)
@@ -131,17 +133,17 @@ class AnimeSamaProvider : MainAPI() {
 
                 if (firstcontent && idx_Epfirstcontent < nbr_Ep) {
                     oldNbrContent = nbr_Ep
-                    val link_scpt = link.groupValues[0]
+                    link_scpt = link.groupValues[0]
                     episodesLink.add(link_scpt)
                 } else {
                     firstcontent = false
                     if (nbr_Ep > oldNbrContent && idx_Ep >= oldNbrContent) {
-                        val link_scpt = link.groupValues[0]
+                        link_scpt = link.groupValues[0]
                         episodesLink.add(link_scpt)
 
                     } else {
 
-                        val link_scpt = link.groupValues[0]
+                        link_scpt = link.groupValues[0]
                         episodesLink[idx_Ep] = episodesLink[idx_Ep] + link_scpt
                     }
                     idx_Ep++
@@ -156,7 +158,7 @@ class AnimeSamaProvider : MainAPI() {
             }
 
         }
-        var episode_tite = ""//select#selectEps.episodes > option
+        var episode_tite: String
 
 
         val title =
@@ -169,26 +171,30 @@ class AnimeSamaProvider : MainAPI() {
         val allstartForLoop = regexCreateEp.findAll(html.text)
         val allEndForLoop = regexgetLoopEnd.findAll(html.text)
         var idxEndForLoop: Int
-
-
+        var nbrEndloop: Int // number of end for loop found
+        var nbrBeginloop: Int // number of begin for loop found
         try {
             idx_Ep = allstartForLoop.elementAt(idBeginLoop).groupValues.get(1).toInt()
             idxEndForLoop = allEndForLoop.elementAt(idEndLoop).groupValues.get(1).toInt()
+            nbrEndloop = allEndForLoop.count()
+            nbrBeginloop = allstartForLoop.count()
         } catch (e: Exception) {
             idx_Ep = 1
             idxEndForLoop = 1
+            nbrEndloop = 0
+            nbrBeginloop = 0
         }
         var idx_EpSpec = 1
         var nextIdxBeginLoop: Int
         var nextidxEndForLoop: Int
         var nbrEpSpec = 0
         var epNo: Int?
-        //AllLinkEpisodeFromContent_i.elementAt(0)
-        val nbrEndloop = allEndForLoop.count()
-        val nbrBeginloop = allstartForLoop.count()
+
+
         episodesLink.forEach { link_video ->
             if (isTitleEp) {
                 episode_tite = all_title[idx_Ep - 1].text()
+                idx_Ep++
                 epNo = null
             } else {
                 if ((idx_Ep > idxEndForLoop || nbrEpSpec > 1) && (idBeginLoop + 1) < nbrBeginloop) {
@@ -243,9 +249,10 @@ class AnimeSamaProvider : MainAPI() {
                         .attr("content")
                 }
                 link_video.contains("myvi.top") -> {
-                    openlink = Regex("""[^']*myvi\.top[^']*""").find(link_video)?.groupValues?.get(
-                        0
-                    ).toString()
+                    openlink =
+                        Regex("""[^']*myvi\.top[^']*""").find(link_video)?.groupValues?.get(
+                            0
+                        ).toString()
 
                     link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
                         app.get(openlink).text
@@ -254,9 +261,10 @@ class AnimeSamaProvider : MainAPI() {
                 }
 
                 link_video.contains("myvi.ru") -> {
-                    openlink = Regex("""[^']*myvi\.ru[^']*""").find(link_video)?.groupValues?.get(
-                        0
-                    ).toString()
+                    openlink =
+                        Regex("""[^']*myvi\.ru[^']*""").find(link_video)?.groupValues?.get(
+                            0
+                        ).toString()
                     link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
                         app.get(openlink).text
                     )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
@@ -281,6 +289,12 @@ class AnimeSamaProvider : MainAPI() {
         val description = documentBack.select("div.carousel-caption > p")[0].text()
         val poster = documentBack.select("img.d-block.w-100")[0].attr("src")
 
+        val recommendations = documentBack.select("div.synsaisons > li")
+        allresultshome.clear()
+        recommendations.forEach { saga ->
+            allresultshome.add(saga.toSearchResponse_all(poster))
+        }
+
         return newAnimeLoadResponse(
             title,
             url,
@@ -288,6 +302,7 @@ class AnimeSamaProvider : MainAPI() {
         ) {
             this.posterUrl = poster
             this.plot = description
+            this.recommendations = allresultshome
             addEpisodes(
                 DubStatus.Dubbed,
                 episodes
@@ -492,7 +507,7 @@ class AnimeSamaProvider : MainAPI() {
     override val mainPage = mainPageOf(
         Pair("$mainUrl", "NOUVEAUX"),
         Pair("$mainUrl", "A ne pas rater"),
-        Pair("$mainUrl", "Les classique"),
+        Pair("$mainUrl", "Les classiques"),
         Pair("$mainUrl", "Derniers animes ajoutés"),
     )
 
