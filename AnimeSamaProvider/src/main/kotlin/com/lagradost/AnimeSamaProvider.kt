@@ -361,7 +361,7 @@ class AnimeSamaProvider : MainAPI() {
         var newSumVost = 0
         var newSumMovie = 0
         var sumMovie = 0
-        var text = ""
+        var text: String
         var detect_anime_Vostfr: Boolean
         var detect_anime_fr: Boolean
         var isVostfr = false
@@ -553,9 +553,9 @@ class AnimeSamaProvider : MainAPI() {
         val home = when (!categoryName.isNullOrBlank()) {
             categoryName.contains("NOUVEAUX") -> document.select(cssSelectorN)
                 .mapNotNull { article -> article.toSearchResponseNewEp() }
-            categoryName.contains("FINIS") -> document.select(cssSelector)[2].select("figure")
+            categoryName.contains("ajoutés") -> document.select(cssSelector)[2].select("figure")
                 .apmap { article -> article.toSearchResponse() }.mapNotNull { it -> it }
-            categoryName.contains("RATER") -> document.select(cssSelector)[1].select("figure")
+            categoryName.contains("rater") -> document.select(cssSelector)[1].select("figure")
                 .apmap { article -> article.toSearchResponse() }.mapNotNull { it -> it }
             else ->
                 document.select(cssSelector)[0].select("figure")
