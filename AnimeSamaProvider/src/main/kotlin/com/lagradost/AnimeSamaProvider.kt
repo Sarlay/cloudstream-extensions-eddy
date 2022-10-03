@@ -1,17 +1,10 @@
 package com.lagradost
 
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
-
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
-
-import me.xdrop.fuzzywuzzy.FuzzySearch
 import java.util.*
-import kotlin.collections.ArrayList
 
 class AnimeSamaProvider : MainAPI() {
     override var mainUrl = "https://anime-sama.fr"
@@ -21,39 +14,6 @@ class AnimeSamaProvider : MainAPI() {
     override var lang = "fr" // fournisseur est en francais
     override val supportedTypes =
         setOf(TvType.Anime, TvType.AnimeMovie, TvType.OVA) // animes, animesfilms
-
-    private val nCharQuery = 10 // take the lenght of the query + nCharQuery
-    private val resultsSearchNbr = 50 // take only n results from search function
-
-
-    data class EpisodeData(
-        @JsonProperty("id") val id: Int,
-        @JsonProperty("title") val title: String?,
-        @JsonProperty("title_english") val title_english: String?,
-        @JsonProperty("title_romanji") val title_romanji: String?,
-        @JsonProperty("title_french") val title_french: String?,
-        @JsonProperty("others") val others: String?,
-        @JsonProperty("type") val type: String?,
-        @JsonProperty("status") val status: String?,
-        @JsonProperty("popularity") val popularity: Int?,
-        @JsonProperty("url") val url: String,
-        @JsonProperty("genre") val genre: Genre?,
-        @JsonProperty("url_image") val url_image: String?,
-        @JsonProperty("score") val score: String?,
-        @JsonProperty("start_date_year") val start_date_year: String?,
-        @JsonProperty("nb_eps") val nb_eps: String?,
-
-        )
-
-    data class Genre(
-        @JsonProperty("0") val action: String?,
-        @JsonProperty("1") val adventure: String?,
-        @JsonProperty("2") val drama: String?,
-        @JsonProperty("3") val fantasy: String?,
-        @JsonProperty("4") val military: String?,
-        @JsonProperty("5") val shounen: String?,
-    )
-
 
     /**
     Cherche le site pour un titre spécifique
@@ -90,29 +50,21 @@ class AnimeSamaProvider : MainAPI() {
         } else {
             EnumSet.of(DubStatus.Dubbed)
         }
+        var tvtype = TvType.Anime
         if (text.lowercase().contains("film")) {
-            return newMovieSearchResponse(
-                title,
-                link,
-                TvType.AnimeMovie,
-                false,
-            ) {
-                this.posterUrl = posterUrl
-
-            }
-
-        } else  // an Anime
-        {
-            return newAnimeSearchResponse(
-                title,
-                link,
-                TvType.Anime,
-                false,
-            ) {
-                this.posterUrl = posterUrl
-                this.dubStatus = dubstatus
-            }
+            tvtype = TvType.AnimeMovie
         }
+
+        return newAnimeSearchResponse(
+            title,
+            link,
+            tvtype,
+            false,
+        ) {
+            this.posterUrl = posterUrl
+            this.dubStatus = dubstatus
+        }
+        //}
     }
 
     private suspend fun Element.toSearchResponse1() {
@@ -132,14 +84,25 @@ class AnimeSamaProvider : MainAPI() {
      * charge la page d'informations, il ya toutes les donées, les épisodes, le résumé etc ...
      * Il faut retourner soit: AnimeLoadResponse, MovieLoadResponse, TorrentLoadResponse, TvSeriesLoadResponse.
      */
-    private val scpritAllEpisode = "episodes.js"
     private val regexAllcontentEpisode =
         Regex("""\[[^\]]*]""")
     private val regexAllLinkepisode = Regex("""'[^']*',""")
-    private val regexCreateEp =Regex("""for \(var i = ([+-]?(?=\.\d|\d)(?:\d+)?(?:\.?\d*))(?:[eE]([+-]?\d+))?""")
+    private val regexCreateEp =
+        Regex("""for[\s]+\(var[\s]+i[\s]+=[\s]+([0-9]+)[\s]*;""") //for[\s]+\(var[\s]+i[\s]+=[\s]+([0-9]+)[\s]*;
+    private val regexgetLoopEnd = Regex("""i[\s]*<=[\s]*([0-9]+)""")
     override suspend fun load(url: String): LoadResponse {
         val episodes = ArrayList<Episode>()
         val episodesLink = ArrayList<String>()
+        val html = app.get(url)
+        val document = html.document
+        val scpritAllEpisode =
+            document.select("script[src*=\"filever\"]").attr("src") ?: "episodes.js"
+        val textLinkBack = document.select("p.soustitreaccueil.syntitreanime").attr("onclick")
+            ?: throw ErrorLoadingException()
+        val linkBack =
+            rgxGetLink.find(textLinkBack)!!.groupValues.get(0).replace("'", "").replace(",", "")
+        val documentBack = app.get(linkBack).document
+
         val url_scriptEp = if (url.takeLast(1) != "/") {
             "$url/$scpritAllEpisode"
         } else {
@@ -157,6 +120,7 @@ class AnimeSamaProvider : MainAPI() {
         var firstcontent = true
         var oldNbrContent = 0
         var link_poster = ""
+        var openlink: String
         resultsAllContent.forEach { content_i ->
             val contentEpisodeLink = content_i.groupValues[0]
             val AllLinkEpisodeFromContent_i = regexAllLinkepisode.findAll(contentEpisodeLink)
@@ -194,39 +158,128 @@ class AnimeSamaProvider : MainAPI() {
         }
         var episode_tite = ""//select#selectEps.episodes > option
 
-        val html = app.get(url)
-        val document = html.document
+
         val title =
             document.select("p.soustitreaccueil.syntitreanime").text()
         var all_title = document.select("select#selectEps.episodes > option")
+        val isTitleEp = !all_title.isNullOrEmpty()
 
-        idx_Ep = regexCreateEp.find(html.text)?.groupValues?.get(1)?.toInt() ?: 1 // episode from 1
+        var idBeginLoop = 0
+        var idEndLoop = 0
+        val allstartForLoop = regexCreateEp.findAll(html.text)
+        val allEndForLoop = regexgetLoopEnd.findAll(html.text)
+        var idxEndForLoop: Int
 
+
+        try {
+            idx_Ep = allstartForLoop.elementAt(idBeginLoop).groupValues.get(1).toInt()
+            idxEndForLoop = allEndForLoop.elementAt(idEndLoop).groupValues.get(1).toInt()
+        } catch (e: Exception) {
+            idx_Ep = 1
+            idxEndForLoop = 1
+        }
+        var idx_EpSpec = 1
+        var nextIdxBeginLoop: Int
+        var nextidxEndForLoop: Int
+        var nbrEpSpec = 0
+        var epNo: Int?
+        //AllLinkEpisodeFromContent_i.elementAt(0)
+        val nbrEndloop = allEndForLoop.count()
+        val nbrBeginloop = allstartForLoop.count()
         episodesLink.forEach { link_video ->
-            episode_tite ="Episode $idx_Ep"
-            if (!all_title.isNullOrEmpty()) {
+            if (isTitleEp) {
                 episode_tite = all_title[idx_Ep - 1].text()
+                epNo = null
+            } else {
+                if ((idx_Ep > idxEndForLoop || nbrEpSpec > 1) && (idBeginLoop + 1) < nbrBeginloop) {
+                    if (idx_Ep > idxEndForLoop) {
+                        idBeginLoop++
+
+
+                        nextIdxBeginLoop =
+                            allstartForLoop.elementAt(idBeginLoop).groupValues.get(1).toInt()
+                        idx_Ep = nextIdxBeginLoop
+
+                        nbrEpSpec = nextIdxBeginLoop - idxEndForLoop
+                        if ((idEndLoop + 1) < nbrEndloop) {
+                            idEndLoop++
+                            nextidxEndForLoop =
+                                allEndForLoop.elementAt(idEndLoop).groupValues.get(1).toInt()
+                        } else {
+                            nextidxEndForLoop = episodesLink.size // end
+                        }
+
+                        idxEndForLoop = nextidxEndForLoop
+                    }
+
+                    episode_tite = "Episode Special $idx_EpSpec"
+                    epNo = null
+                    idx_EpSpec++
+                    nbrEpSpec--
+                } else {
+                    episode_tite = "Episode $idx_Ep"
+                    epNo = idx_Ep
+                    idx_Ep++
+                }
+            } //
+
+            when (!link_video.isNullOrBlank()) {
+                link_video.contains("video.sibnet") -> {
+                    openlink = Regex("""[^']*video\.sibnet[^']*""").find(
+                        link_video
+                    )?.groupValues?.get(0).toString()
+                    link_poster = app.get(
+                        openlink
+                    ).document.select("[property=og:image]")
+                        .attr("content")
+                }
+                link_video.contains("sendvid") -> {
+                    openlink = Regex("""[^']*sendvid[^']*""").find(
+                        link_video
+                    )?.groupValues?.get(0).toString()
+                    link_poster = app.get(
+                        openlink
+                    ).document.select("[property=og:image]")
+                        .attr("content")
+                }
+                link_video.contains("myvi.top") -> {
+                    openlink = Regex("""[^']*myvi\.top[^']*""").find(link_video)?.groupValues?.get(
+                        0
+                    ).toString()
+
+                    link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
+                        app.get(openlink).text
+                    )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
+                        .replace("%3f", "?").replace("%3d", "=").replace("%26", "&")
+                }
+
+                link_video.contains("myvi.ru") -> {
+                    openlink = Regex("""[^']*myvi\.ru[^']*""").find(link_video)?.groupValues?.get(
+                        0
+                    ).toString()
+                    link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
+                        app.get(openlink).text
+                    )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
+                        .replace("%3f", "?").replace("%3d", "=").replace("%26", "&")
+                }
+
+                else -> openlink = ""
             }
-           /* link_poster = when(!link_video.isNullOrBlank()){
-                link_video.contains("video.sibnet.ru") -> app.get(url).document.select("[property=og:image]").attr("content")
-                else -> ""
-            }*/
+
             episodes.add(
                 Episode(
-                    link_video,
-                    episode = idx_Ep,
+                    data = link_video,
+                    episode = epNo,
                     name = episode_tite,
-                    posterUrl = link_poster // document.select("[property=og:image]") pour
-
+                    posterUrl = link_poster
                 )
-
             )
-            idx_Ep++
+
         }
 
 
-        val description = ""
-        val poster = ""
+        val description = documentBack.select("div.carousel-caption > p")[0].text()
+        val poster = documentBack.select("img.d-block.w-100")[0].attr("src")
 
         return newAnimeLoadResponse(
             title,
@@ -258,7 +311,7 @@ class AnimeSamaProvider : MainAPI() {
 
         results.forEach { link ->
 
-            var playerUrl = link.groupValues[0].replace("'","").replace(",","")
+            var playerUrl = link.groupValues[0].replace("'", "").replace(",", "")
 
             if (!playerUrl.isNullOrBlank())
                 loadExtractor(
@@ -370,17 +423,6 @@ class AnimeSamaProvider : MainAPI() {
             if (global_link.contains("search.php")) {
                 return null
             }
-            /*  if (global_link.contains("search.php")) {
-                  val document =
-                      app.get(global_link).document
-
-                  var (link, dub) = document.select("div.synsaisons > li").tryTofindLatestSeason()
-                  var dubstatus = if (dub.toString().lowercase().contains("vostfr")) {
-                      EnumSet.of(DubStatus.Subbed)
-                  } else {
-                      EnumSet.of(DubStatus.Dubbed)
-                  }
-              } else {*/
             val document =
                 app.get(global_link).document
             var (link, dub) = document.select("div.synsaisons > li").tryTofindLatestSeason()
@@ -390,64 +432,123 @@ class AnimeSamaProvider : MainAPI() {
                 EnumSet.of(DubStatus.Dubbed)
             }
             val type = dub.toString()
-            //}
-            val isMovie = type.contains("film")
-            if (isMovie) {
-                return newMovieSearchResponse(
-                    title,
-                    link.toString(),
-                    TvType.AnimeMovie,
-                    false,
-                ) {
-                    this.posterUrl = posterUrl
+            var tv_type = TvType.Anime
 
-                }
-
-            } else  // an Anime
-            {
-                return newAnimeSearchResponse(
-                    title,
-                    link.toString(),
-                    TvType.Anime,
-                    false,
-                ) {
-                    this.posterUrl = posterUrl
-                    this.dubStatus = dubstatus
-                }
+            if (type.contains("film")) {
+                tv_type = TvType.AnimeMovie
             }
+
+            return newAnimeSearchResponse(
+                title,
+                link.toString(),
+                tv_type,
+                false,
+            ) {
+                this.posterUrl = posterUrl
+                this.dubStatus = dubstatus
+            }
+
         } else {
             return null
         }
 
     }
 
+    private fun Element.toSearchResponseNewEp(): SearchResponse? {
+        val figcaption = select("a >figcaption > span").text()
+        if (figcaption.lowercase().trim() != "scan") {
+            val posterUrl = select("a > img").attr("src")
+            //val type = figcaption.lowercase()
+            val scheduleTime = select("a >span.badgeHautDroite").text()
+            val title = select("a >figcaption").text().replace("$figcaption", "")
+            val link = select("a").attr("href")
+            if (link.contains("search.php")) {
+                return null
+            }
+
+            var dubstatus = if (figcaption.lowercase().contains("vf")) {
+                EnumSet.of(DubStatus.Dubbed)
+            } else {
+                EnumSet.of(DubStatus.Subbed)
+            }
+            val tv_type = TvType.Anime
+
+            return newAnimeSearchResponse(
+                "$scheduleTime \n $title",
+                link,
+                tv_type,
+                false,
+            ) {
+                this.posterUrl = posterUrl
+                this.dubStatus = dubstatus
+            }
+
+        } else {
+            return null
+        }
+
+    }
 
     override val mainPage = mainPageOf(
-        Pair("$mainUrl", "A NE PAS RATER"),
-        Pair("$mainUrl", "CLASSIQUE"),
-        Pair("$mainUrl", "ANIMES FINIS"),
+        Pair("$mainUrl", "NOUVEAUX"),
+        Pair("$mainUrl", "A ne pas rater"),
+        Pair("$mainUrl", "Les classique"),
+        Pair("$mainUrl", "Derniers animes ajoutés"),
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val categoryName = request.name
+        var categoryName = request.name
 
         var cssSelector = ""
+        var cssSelectorN = ""
+
+        val url = request.data
+        val cal = Calendar.getInstance()
+        val today = cal.get(Calendar.DAY_OF_WEEK)
+        var idDay: String
+
+        idDay = when (today) {
+
+            Calendar.MONDAY -> {
+                "1"
+            }
+            Calendar.TUESDAY -> {
+                "2"
+            }
+            Calendar.WEDNESDAY -> {
+                "3"
+            }
+            Calendar.THURSDAY -> {
+                "4"
+            }
+            Calendar.FRIDAY -> {
+                "5"
+            }
+            Calendar.SATURDAY -> {
+                "6"
+            }
+            else -> "0"
+        }
         if (page <= 1) {
             cssSelector = "div.container-fluid>div#sectionsAccueil"
+            cssSelectorN = "div#$idDay>div#sectionsAccueil > figure"
         }
-        val url = request.data
-
         val document = app.get(url).document
 
         val home = when (!categoryName.isNullOrBlank()) {
-            request.name.contains("FINIS") -> document.select("$cssSelector")[2].select("figure")
+            categoryName.contains("NOUVEAUX") -> document.select(cssSelectorN)
+                .mapNotNull { article -> article.toSearchResponseNewEp() }
+            categoryName.contains("FINIS") -> document.select(cssSelector)[2].select("figure")
                 .apmap { article -> article.toSearchResponse() }.mapNotNull { it -> it }
-            request.name.contains("RATER") -> document.select("$cssSelector")[1].select("figure")
+            categoryName.contains("RATER") -> document.select(cssSelector)[1].select("figure")
                 .apmap { article -> article.toSearchResponse() }.mapNotNull { it -> it }
             else ->
-                document.select("$cssSelector")[0].select("figure")
+                document.select(cssSelector)[0].select("figure")
                     .apmap { article -> article.toSearchResponse() }.mapNotNull { it -> it }
         }
-        return newHomePageResponse(request.name, home)
+        if (categoryName.contains("NOUVEAUX")) {
+            categoryName = document.select("div#$idDay.fadeJours > div.col-12>p.titreJours").text()
+        }
+        return newHomePageResponse(categoryName, home)
     }
 }
