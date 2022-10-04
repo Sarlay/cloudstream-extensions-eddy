@@ -7,12 +7,14 @@ import okhttp3.Interceptor
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.runBlocking
+import java.lang.Float.POSITIVE_INFINITY
 
 import java.lang.Math.ceil
 
 
 class MacIPTVProvider : MainAPI() {
-    private val defaulmac_adresse = "mac=00:1A:79:A7:9E:ED"//"mac=00:1A:79:A7:9E:ED" //mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
+    private val defaulmac_adresse =
+        "mac=00:1A:79:A7:9E:ED"//"mac=00:1A:79:A7:9E:ED" //mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
     private val defaultmainUrl = "http://matrix-ott.tv:8080"//"http://ultra-box.club"
     override var name = "BoxIPTV"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
@@ -47,12 +49,6 @@ class MacIPTVProvider : MainAPI() {
         )
         return headerMac
     }
-
-    /* private val headerMac =
-         mapOf(
-             "Cookie" to mac_adresse,
-             "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
-         )*/// matrix-ott 00:1a:79:a7:9e:ed;June 20, 2023, 3:51 am
 
 
     private fun getCloseMatches(sequence: String, items: Collection<String>): List<String> {
@@ -133,7 +129,7 @@ class MacIPTVProvider : MainAPI() {
     private fun getEpg(response: String): String {
         val reponseJSON_0 = tryParseJson<Root_epg>(response)
         var description = ""
-        val epg_data = reponseJSON_0?.js?.forEach { epg_i ->
+        reponseJSON_0?.js?.forEach { epg_i ->
             var name = epg_i.name
             var descr = epg_i.descr
             var t_time = epg_i.tTime
@@ -203,14 +199,17 @@ class MacIPTVProvider : MainAPI() {
 
         }
         if (showlist.size >= 2) {
-            return TvSeriesLoadResponse(
+            description =
+                "Veuillez à bien chercher et sélectionner votre chaîne afin de regarder votre émission en direct"
+            return newTvSeriesLoadResponse(
                 title,
-                url,
-                this.name,
+                "",
                 TvType.TvSeries,
                 showlist,
-                posterUrl
-            )
+            ) {
+                this.posterUrl = posterUrl
+                this.plot = description
+            }
         } else {
             return LiveStreamLoadResponse(
                 name = title,
@@ -218,8 +217,7 @@ class MacIPTVProvider : MainAPI() {
                 apiName = this.name,
                 dataUrl = link,
                 posterUrl = posterUrl,
-                //year = null,
-                plot = description
+                plot = description,
             )
         }
     }
@@ -279,6 +277,12 @@ class MacIPTVProvider : MainAPI() {
         val regexGetLink = Regex("""(http.*)\"\},""")
         val link =
             regexGetLink.find(getTokenLink)?.groupValues?.get(1).toString().replace("""\""", "")
+        /*val headerlocation = app.get(
+            link,
+            allowRedirects = false
+        ).headers
+        val tslink= headerlocation.get("location")
+            .toString()*/
 
         callback.invoke(
             ExtractorLink(
@@ -415,27 +419,33 @@ class MacIPTVProvider : MainAPI() {
         val header = getAuthHeader()
         val url =
             "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"//&force_ch_link_check=&JsHttpRequest=1-xml
-        var response_0 = app.get(url, headers = header)
-        val reponseJSON_0 = response_0.parsed<JsonGetGenre>()
-        reponseJSON_0.js.apmap { js ->
+        var responseGetgenre = app.get(url, headers = header)
+
+        /*  val urlGetallchannels ="$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
+          var responseAllchannels = app.get(urlGetallchannels, headers = header)
+          val responseAllchannelstoJson = responseAllchannels.parsed<Root>()
+        */
+
+        val responseGetgenretoJSON = responseGetgenre.parsed<JsonGetGenre>()
+
+        responseGetgenretoJSON.js.apmap { js ->
             val idGenre = js.id
             val categoryTitle = js.title.toString()
 
             if (idGenre!!.contains("""\d""".toRegex()) && categoryTitle.contains("FR")) {
                 var page_i = 1;
                 val url =
-                    "$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&force_ch_link_check=&fav=0&sortby=number&hd=0&p=$page_i&JsHttpRequest=1-xml&from_ch_id=0"
+                    "$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&fav=0&p=$page_i&JsHttpRequest=1-xml"
                 var response = app.get(url, headers = header, timeout = 3)
                 var reponseJSON = response.parsed<Root>()
-                val total_items = reponseJSON?.js?.totalItems
-                val max_page_items = reponseJSON?.js?.maxPageItems?.toDouble()
+                val total_items = reponseJSON.js?.totalItems
+                val max_page_items = reponseJSON.js?.maxPageItems?.toDouble()
                 val pages = ceil(total_items!!.toDouble() / max_page_items!!.toDouble()).toInt()
                 while (page_i <= pages) {
-                    val data = reponseJSON?.js?.data
+                    val data = reponseJSON.js?.data
                     data?.forEach { value ->
                         val name = value.name.toString()
                         val tv_genre_id = value.tvGenreId
-                        //&& b.contains(a) || a.contains(b)
                         val idCH = value.id
                         val link = "http://localhost/ch/$idCH" + "_"
                         val logo = value.logo?.replace("""\""", "")
@@ -455,7 +465,7 @@ class MacIPTVProvider : MainAPI() {
                     }
                     page_i++
                     val url =
-                        "$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&force_ch_link_check=&fav=0&sortby=number&hd=0&p=$page_i&JsHttpRequest=1-xml&from_ch_id=0"
+                        "$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&fav=0&p=$page_i&JsHttpRequest=1-xml"
                     response = app.get(url, headers = header, timeout = 3)
                     reponseJSON = if (response.text.takeLast(2) != "}}") {
                         tryParseJson<Root>("${response.text}}") ?: response.parsed()
@@ -492,7 +502,7 @@ class MacIPTVProvider : MainAPI() {
                         "$mainUrl/-${media.id}-",
                         name,
                         TvType.Live,
-                        media.url_image + "?w=10&h=10",
+                        media.url_image,
                     )
                 } else {
                     null
