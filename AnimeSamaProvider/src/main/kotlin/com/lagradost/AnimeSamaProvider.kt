@@ -149,7 +149,20 @@ class AnimeSamaProvider : MainAPI() {
                     ).toString()
 
 
-                link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
+                link_poster = Regex("""([^=]*myvi[^\\]*\.[j]pg[n]*[^\\]*)""").find(
+                    app.get(openlink).text
+                )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
+                    .replace("%3f", "?").replace("%3d", "=").replace("%26", "&")
+
+            }
+            link_video.contains("myvi.tv") -> {
+                openlink =
+                    Regex("""[^']*myvi\.tv[^']*""").find(link_video)?.groupValues?.get(
+                        0
+                    ).toString()
+
+
+                link_poster = Regex("""([^=]*myvi[^\\]*\.[j]pg[n]*[^\\]*)""").find(
                     app.get(openlink).text
                 )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
                     .replace("%3f", "?").replace("%3d", "=").replace("%26", "&")
@@ -161,8 +174,10 @@ class AnimeSamaProvider : MainAPI() {
                     Regex("""[^']*myvi\.ru[^']*""").find(link_video)?.groupValues?.get(
                         0
                     ).toString()
-
-                link_poster = Regex("""([^=]*myvi[^\\]*\.[jpgn]*)[\\\%]""").find(
+                if (openlink.contains("http")) {
+                    openlink = "http:$openlink"
+                }
+                link_poster = Regex("""([^=]*myvi[^\\]*\.[j]pg[n]*[^\\]*)""").find(
                     app.get(openlink).text
                 )?.groupValues?.get(1).toString().replace("%2f", "/").replace("%3a", ":")
                     .replace("%3f", "?").replace("%3d", "=").replace("%26", "&")
@@ -388,11 +403,11 @@ class AnimeSamaProvider : MainAPI() {
 
                     }
 
-                }else{
+                } else {
                     countconcat++
                     if (countconcat == allcontentSize) { // detect if we concatenate all links
-                        line = maxEpisode+1
-                        status=true
+                        line = maxEpisode + 1
+                        status = true
                     }
 
                 }
@@ -421,7 +436,7 @@ class AnimeSamaProvider : MainAPI() {
                 DubStatus.Dubbed,
                 episodes
             )
-            this.comingSoon=status
+            this.comingSoon = status
 
         }
 
