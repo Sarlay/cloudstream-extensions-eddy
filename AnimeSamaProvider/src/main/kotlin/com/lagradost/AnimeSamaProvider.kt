@@ -343,48 +343,59 @@ class AnimeSamaProvider : MainAPI() {
         var countconcat = 1
         var groupurl: String
         var urlAtline: String
+        var status = false
 
         while (line < maxEpisode) {
             resultsAllContent.forEach { contentEpisodeLink ->
                 val AllLinkEpisodeFromContent_i =
                     regexAllLinkepisode.findAll(contentEpisodeLink.groupValues[0])
                 val nbr_Ep = AllLinkEpisodeFromContent_i.count()
-                if (nbr_Ep > maxEpisode) { // update maxEpisode found
-                    maxEpisode = nbr_Ep
-                }
-                if (line < nbr_Ep) {
-                    urlAtline = AllLinkEpisodeFromContent_i.elementAt(line).groupValues[0]
+                if (nbr_Ep != 0) {
+                    if (nbr_Ep > maxEpisode) { // update maxEpisode found
+                        maxEpisode = nbr_Ep
+                    }
+                    if (line < nbr_Ep) {
+                        urlAtline = AllLinkEpisodeFromContent_i.elementAt(line).groupValues[0]
 
-                    if (indexContent == 0 || alreadyConcatNlink) { // start new line
-                        alreadyConcatNlink = false
-                        episodesLink.add(urlAtline)
-                        countconcat = 1
-                    } else {
-                        episodesLink[line] = episodesLink[line] + urlAtline
-                        countconcat++
-                        if (countconcat == allcontentSize) { // detect if we concatenate all links
-                            alreadyConcatNlink = true
+                        if (indexContent == 0 || alreadyConcatNlink) { // start new line
+                            alreadyConcatNlink = false
+                            episodesLink.add(urlAtline)
+                            countconcat = 1
+                        } else {
+                            episodesLink[line] = episodesLink[line] + urlAtline
+                            countconcat++
+                            if (countconcat == allcontentSize) { // detect if we concatenate all links
+                                alreadyConcatNlink = true
+                            }
                         }
                     }
-                }
-                if (indexContent == allcontentSize - 1) {
-                    indexContent = 0
-                    dataLoop = loopLookingforEpisodeTitle(dataLoop, dataset)
-                    groupurl = episodesLink[line]
-                    //link_poster = findPosterfromEmbedUrl(groupurl)
-                    episodes.add(
-                        Episode(
-                            data = groupurl,
-                            episode = dataLoop.results.epNo,
-                            name = dataLoop.results.episode_tite,
-                            //posterUrl = link_poster
+                    if (indexContent == allcontentSize - 1) {
+                        indexContent = 0
+                        dataLoop = loopLookingforEpisodeTitle(dataLoop, dataset)
+                        groupurl = episodesLink[line]
+                        //link_poster = findPosterfromEmbedUrl(groupurl)
+                        episodes.add(
+                            Episode(
+                                data = groupurl,
+                                episode = dataLoop.results.epNo,
+                                name = dataLoop.results.episode_tite,
+                                //posterUrl = link_poster
+                            )
                         )
-                    )
-                    line++
-                } else {
-                    indexContent++
-                }
+                        line++
+                    } else {
+                        indexContent++
 
+                    }
+
+                }else{
+                    countconcat++
+                    if (countconcat == allcontentSize) { // detect if we concatenate all links
+                        line = maxEpisode+1
+                        status=true
+                    }
+
+                }
             }
         }
         episodes.apmap { episode -> episode.posterUrl = episode.data.findPosterfromEmbedUrl() }
@@ -410,6 +421,7 @@ class AnimeSamaProvider : MainAPI() {
                 DubStatus.Dubbed,
                 episodes
             )
+            this.comingSoon=status
 
         }
 
