@@ -388,13 +388,13 @@ class AnimeSamaProvider : MainAPI() {
                         indexContent = 0
                         dataLoop = loopLookingforEpisodeTitle(dataLoop, dataset)
                         groupurl = episodesLink[line]
-                        //link_poster = findPosterfromEmbedUrl(groupurl)
+                        link_poster = groupurl.findPosterfromEmbedUrl()
                         episodes.add(
                             Episode(
                                 data = groupurl,
                                 episode = dataLoop.results.epNo,
                                 name = dataLoop.results.episode_tite,
-                                //posterUrl = link_poster
+                                posterUrl = link_poster
                             )
                         )
                         line++
@@ -413,7 +413,7 @@ class AnimeSamaProvider : MainAPI() {
                 }
             }
         }
-        episodes.apmap { episode -> episode.posterUrl = episode.data.findPosterfromEmbedUrl() }
+        //episodes.apmap { episode -> episode.posterUrl = episode.data.findPosterfromEmbedUrl() }
 
         val description = documentBack.select("div.carousel-caption > p")[0].text()
         val poster = documentBack.select("img.d-block.w-100")[0].attr("src")
