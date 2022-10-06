@@ -14,8 +14,8 @@ import java.lang.Math.ceil
 
 class MacIPTVProvider : MainAPI() {
     private val defaulmac_adresse =
-        "mac=00:1A:79:A7:9E:ED"//"mac=00:1A:79:A7:9E:ED" //mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
-    private val defaultmainUrl = "http://matrix-ott.tv:8080"//"http://ultra-box.club"
+        "mac=00:1A:79:6C:CD:C8"//"mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
+    private val defaultmainUrl = "http://ultra-box.club" //"http://matrix-ott.tv:8080"
     override var name = "BoxIPTV"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
@@ -105,24 +105,24 @@ class MacIPTVProvider : MainAPI() {
 
     data class Js_epg(
 
-        @JsonProperty("id") var id: String? = null,
-        @JsonProperty("ch_id") var chId: String? = null,
-        @JsonProperty("correct") var correct: String? = null,
-        @JsonProperty("time") var time: String? = null,
-        @JsonProperty("time_to") var timeTo: String? = null,
-        @JsonProperty("duration") var duration: Int? = null,
+        /*   @JsonProperty("id") var id: String? = null,
+           @JsonProperty("ch_id") var chId: String? = null,
+           @JsonProperty("correct") var correct: String? = null,
+           @JsonProperty("time") var time: String? = null,
+           @JsonProperty("time_to") var timeTo: String? = null,
+           @JsonProperty("duration") var duration: Int? = null,*/
         @JsonProperty("name") var name: String? = null,
         @JsonProperty("descr") var descr: String? = null,
-        @JsonProperty("real_id") var realId: String? = null,
+/*        @JsonProperty("real_id") var realId: String? = null,
         @JsonProperty("category") var category: String? = null,
         @JsonProperty("director") var director: String? = null,
         @JsonProperty("actor") var actor: String? = null,
         @JsonProperty("start_timestamp") var startTimestamp: Int? = null,
-        @JsonProperty("stop_timestamp") var stopTimestamp: Int? = null,
+        @JsonProperty("stop_timestamp") var stopTimestamp: Int? = null,*/
         @JsonProperty("t_time") var tTime: String? = null,
         @JsonProperty("t_time_to") var tTimeTo: String? = null,
-        @JsonProperty("mark_memo") var markMemo: Int? = null,
-        @JsonProperty("mark_archive") var markArchive: Int? = null
+        /*     @JsonProperty("mark_memo") var markMemo: Int? = null,
+             @JsonProperty("mark_archive") var markArchive: Int? = null*/
 
     )
 
@@ -165,11 +165,12 @@ class MacIPTVProvider : MainAPI() {
                 description = getEpg(response.text)
                 link = media.url
                 title = media.title
-                val a = title.lowercase().replace("fr", " ").replace(":", " ").trim()//
+                val a = title.uppercase().replace(codeCountry, " ").replace(":", " ").trim()//
                 posterUrl = media.url_image.toString()
                 var b_new: String
                 arraymediaPlaylist.apmap { channel ->
-                    val b = channel.title.lowercase().replace("fr", " ").replace(":", " ").trim()//
+                    val b = channel.title.uppercase().replace(codeCountry, " ").replace(":", " ")
+                        .trim()//
                     b_new = b.take(4)
                     if (a.take(4).contains(b_new) && media.tv_genre_id == channel.tv_genre_id) {
                         val epg_url =
@@ -313,20 +314,20 @@ class MacIPTVProvider : MainAPI() {
 
     data class Cmds(
 
-        @JsonProperty("id") var id: String? = null,
+        // @JsonProperty("id") var id: String? = null,
         @JsonProperty("ch_id") var chId: String? = null,
-        @JsonProperty("priority") var priority: String? = null,
-        @JsonProperty("url") var url: String? = null,
-        @JsonProperty("status") var status: String? = null,
-        @JsonProperty("use_http_tmp_link") var useHttpTmpLink: String? = null,
-        @JsonProperty("wowza_tmp_link") var wowzaTmpLink: String? = null,
-        @JsonProperty("user_agent_filter") var userAgentFilter: String? = null,
-        @JsonProperty("use_load_balancing") var useLoadBalancing: String? = null,
-        @JsonProperty("changed") var changed: String? = null,
-        @JsonProperty("enable_monitoring") var enableMonitoring: String? = null,
-        @JsonProperty("enable_balancer_monitoring") var enableBalancerMonitoring: String? = null,
-        @JsonProperty("nginx_secure_link") var nginxSecureLink: String? = null,
-        @JsonProperty("flussonic_tmp_link") var flussonicTmpLink: String? = null
+        /*      @JsonProperty("priority") var priority: String? = null,
+              @JsonProperty("url") var url: String? = null,
+              @JsonProperty("status") var status: String? = null,
+              @JsonProperty("use_http_tmp_link") var useHttpTmpLink: String? = null,
+              @JsonProperty("wowza_tmp_link") var wowzaTmpLink: String? = null,
+              @JsonProperty("user_agent_filter") var userAgentFilter: String? = null,
+              @JsonProperty("use_load_balancing") var useLoadBalancing: String? = null,
+              @JsonProperty("changed") var changed: String? = null,
+              @JsonProperty("enable_monitoring") var enableMonitoring: String? = null,
+              @JsonProperty("enable_balancer_monitoring") var enableBalancerMonitoring: String? = null,
+              @JsonProperty("nginx_secure_link") var nginxSecureLink: String? = null,
+              @JsonProperty("flussonic_tmp_link") var flussonicTmpLink: String? = null*/
 
     )
 
@@ -335,14 +336,14 @@ class MacIPTVProvider : MainAPI() {
         @JsonProperty("id") var id: String? = null,
         @JsonProperty("name") var name: String? = null,
         @JsonProperty("number") var number: String? = null,
-        @JsonProperty("censored") var censored: Int? = null,
+/*        @JsonProperty("censored") var censored: Int? = null,
         @JsonProperty("cmd") var cmd: String? = null,
         @JsonProperty("cost") var cost: String? = null,
         @JsonProperty("count") var count: String? = null,
         @JsonProperty("status") var status: Int? = null,
-        @JsonProperty("hd") var hd: String? = null,
+        @JsonProperty("hd") var hd: String? = null,*/
         @JsonProperty("tv_genre_id") var tvGenreId: String? = null,
-        @JsonProperty("base_ch") var baseCh: String? = null,
+/*        @JsonProperty("base_ch") var baseCh: String? = null,
         @JsonProperty("xmltv_id") var xmltvId: String? = null,
         @JsonProperty("service_id") var serviceId: String? = null,
         @JsonProperty("bonus_ch") var bonusCh: String? = null,
@@ -357,28 +358,28 @@ class MacIPTVProvider : MainAPI() {
         @JsonProperty("enable_wowza_load_balancing") var enableWowzaLoadBalancing: String? = null,
         @JsonProperty("cmd_1") var cmd1: String? = null,
         @JsonProperty("cmd_2") var cmd2: String? = null,
-        @JsonProperty("cmd_3") var cmd3: String? = null,
+        @JsonProperty("cmd_3") var cmd3: String? = null,*/
         @JsonProperty("logo") var logo: String? = null,
-        @JsonProperty("correct_time") var correctTime: String? = null,
-        @JsonProperty("nimble_dvr") var nimbleDvr: String? = null,
-        @JsonProperty("allow_pvr") var allowPvr: Int? = null,
-        @JsonProperty("allow_local_pvr") var allowLocalPvr: Int? = null,
-        @JsonProperty("allow_remote_pvr") var allowRemotePvr: Int? = null,
-        @JsonProperty("modified") var modified: String? = null,
-        @JsonProperty("allow_local_timeshift") var allowLocalTimeshift: String? = null,
-        @JsonProperty("nginx_secure_link") var nginxSecureLink: String? = null,
-        @JsonProperty("tv_archive_duration") var tvArchiveDuration: Int? = null,
-        @JsonProperty("locked") var locked: Int? = null,
-        @JsonProperty("lock") var lock: Int? = null,
-        @JsonProperty("fav") var fav: Int? = null,
-        @JsonProperty("archive") var archive: Int? = null,
-        @JsonProperty("genres_str") var genresStr: String? = null,
-        @JsonProperty("cur_playing") var curPlaying: String? = null,
-        @JsonProperty("epg") var epg: ArrayList<String> = arrayListOf(),
-        @JsonProperty("open") var open: Int? = null,
+        /*     @JsonProperty("correct_time") var correctTime: String? = null,
+             @JsonProperty("nimble_dvr") var nimbleDvr: String? = null,
+             @JsonProperty("allow_pvr") var allowPvr: Int? = null,
+             @JsonProperty("allow_local_pvr") var allowLocalPvr: Int? = null,
+             @JsonProperty("allow_remote_pvr") var allowRemotePvr: Int? = null,
+             @JsonProperty("modified") var modified: String? = null,
+             @JsonProperty("allow_local_timeshift") var allowLocalTimeshift: String? = null,
+             @JsonProperty("nginx_secure_link") var nginxSecureLink: String? = null,
+             @JsonProperty("tv_archive_duration") var tvArchiveDuration: Int? = null,
+             @JsonProperty("locked") var locked: Int? = null,
+             @JsonProperty("lock") var lock: Int? = null,
+             @JsonProperty("fav") var fav: Int? = null,
+             @JsonProperty("archive") var archive: Int? = null,
+             @JsonProperty("genres_str") var genresStr: String? = null,
+             @JsonProperty("cur_playing") var curPlaying: String? = null,
+             @JsonProperty("epg") var epg: ArrayList<String> = arrayListOf(),
+             @JsonProperty("open") var open: Int? = null,*/
         @JsonProperty("cmds") var cmds: ArrayList<Cmds> = arrayListOf(),
-        @JsonProperty("use_load_balancing") var useLoadBalancing: Int? = null,
-        @JsonProperty("pvr") var pvr: Int? = null
+        /* @JsonProperty("use_load_balancing") var useLoadBalancing: Int? = null,
+         @JsonProperty("pvr") var pvr: Int? = null*/
 
     )
 
@@ -386,8 +387,8 @@ class MacIPTVProvider : MainAPI() {
 
         @JsonProperty("total_items") var totalItems: Int? = null,
         @JsonProperty("max_page_items") var maxPageItems: Int? = null,
-        @JsonProperty("selected_item") var selectedItem: Int? = null,
-        @JsonProperty("cur_page") var curPage: Int? = null,
+        /*  @JsonProperty("selected_item") var selectedItem: Int? = null,
+          @JsonProperty("cur_page") var curPage: Int? = null,*/
         @JsonProperty("data") var data: ArrayList<Data> = arrayListOf()
 
     )
@@ -402,9 +403,9 @@ class MacIPTVProvider : MainAPI() {
 
         @JsonProperty("id") var id: String? = null,
         @JsonProperty("title") var title: String? = null,
-        @JsonProperty("alias") var alias: String? = null,
-        @JsonProperty("active_sub") var activeSub: Boolean? = null,
-        @JsonProperty("censored") var censored: Int? = null
+        /*  @JsonProperty("alias") var alias: String? = null,
+          @JsonProperty("active_sub") var activeSub: Boolean? = null,
+          @JsonProperty("censored") var censored: Int? = null*/
 
     )
 
@@ -414,6 +415,7 @@ class MacIPTVProvider : MainAPI() {
 
     )
 
+    private val codeCountry = "FR" // Try US UK BR 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
         val header = getAuthHeader()
@@ -432,7 +434,7 @@ class MacIPTVProvider : MainAPI() {
             val idGenre = js.id
             val categoryTitle = js.title.toString()
 
-            if (idGenre!!.contains("""\d""".toRegex()) && categoryTitle.contains("FR")) {
+            if (idGenre!!.contains("""\d""".toRegex()) && categoryTitle.contains(codeCountry)) {
                 var page_i = 1;
                 val url =
                     "$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&fav=0&p=$page_i&JsHttpRequest=1-xml"
@@ -480,7 +482,7 @@ class MacIPTVProvider : MainAPI() {
             var b_new: String
             var newgroupMedia: Boolean
             val home = arraymediaPlaylist.mapNotNull { media ->
-                val b = media.title.lowercase().replace("fr", " ").replace(":", " ").trim()//
+                val b = media.title.uppercase().replace(codeCountry, " ").replace(":", " ").trim()//
                 b_new = b.take(4)
                 newgroupMedia = true
                 for (nameMedia in groupMedia) {
@@ -495,7 +497,8 @@ class MacIPTVProvider : MainAPI() {
                     groupMedia.add(b_new)
                     val groupName =
                         media.title.replace("""\s\d""".toRegex(), "").replace("""FHD""", "")
-                            .replace("""UHD""", "").replace(""":""", "").replace("""FR """, "")
+                            .replace("""UHD""", "").replace(""":""", "")
+                            .replace("""$codeCountry """, "")
                             .replace("""HD""", "").trim()
                     LiveSearchResponse(
                         groupName,
@@ -508,9 +511,9 @@ class MacIPTVProvider : MainAPI() {
                     null
                 }
             }
-            if (categoryTitle.contains("FR")) {
+            if (categoryTitle.contains(codeCountry)) {
                 var nameGenre = categoryTitle + " \uD83C\uDDE8\uD83C\uDDF5"
-                nameGenre = nameGenre.replace("FR ", "").trim()
+                nameGenre = nameGenre.replace("$codeCountry ", "").trim()
                 arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
             }
 
