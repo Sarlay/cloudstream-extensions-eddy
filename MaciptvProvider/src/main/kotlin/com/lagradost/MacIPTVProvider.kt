@@ -14,8 +14,8 @@ import java.lang.Math.ceil
 
 class MacIPTVProvider : MainAPI() {
     private val defaulmac_adresse =
-        "mac=00:1A:79:6C:CD:C8"//"mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
-    private val defaultmainUrl = "http://ultra-box.club" //"http://matrix-ott.tv:8080"
+        "mac=00:1A:79:A7:9E:ED"//"mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
+    private val defaultmainUrl = "http://matrix-ott.tv:8080"//"http://ultra-box.club" //
     override var name = "BoxIPTV"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
@@ -165,11 +165,11 @@ class MacIPTVProvider : MainAPI() {
                 description = getEpg(response.text)
                 link = media.url
                 title = media.title
-                val a = title.uppercase().replace(codeCountry, " ").replace(":", " ").trim()//
+                val a = title.uppercase().replace(rgxcodeCountry, " ").trim()//
                 posterUrl = media.url_image.toString()
                 var b_new: String
                 arraymediaPlaylist.apmap { channel ->
-                    val b = channel.title.uppercase().replace(codeCountry, " ").replace(":", " ")
+                    val b = channel.title.uppercase().replace(rgxcodeCountry, " ")
                         .trim()//
                     b_new = b.take(4)
                     if (a.take(4).contains(b_new) && media.tv_genre_id == channel.tv_genre_id) {
@@ -415,7 +415,12 @@ class MacIPTVProvider : MainAPI() {
 
     )
 
-    private val codeCountry = "FR" // Try US UK BR 
+    private val codeCountry = "FR|US|UK" // Try US UK BR
+    private fun findCountryId(codeCountry: String): Regex {
+        return """(?:^|\W+|\s)+($codeCountry)(?:\s|\W+|${'$'}|\|)+""".toRegex()
+    }
+
+    val rgxcodeCountry = findCountryId(codeCountry)
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
         val header = getAuthHeader()
@@ -434,11 +439,13 @@ class MacIPTVProvider : MainAPI() {
             val idGenre = js.id
             val categoryTitle = js.title.toString()
 
-            if (idGenre!!.contains("""\d""".toRegex()) && categoryTitle.contains(codeCountry)) {
-                var page_i = 1;
+            if (idGenre!!.contains("""\d""".toRegex()) && categoryTitle.uppercase()
+                    .contains(rgxcodeCountry)
+            ) {
+                var page_i = 1
                 val url =
                     "$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&fav=0&p=$page_i&JsHttpRequest=1-xml"
-                var response = app.get(url, headers = header, timeout = 3)
+                var response = app.get(url, headers = header, timeout = 10)
                 var reponseJSON = response.parsed<Root>()
                 val total_items = reponseJSON.js?.totalItems
                 val max_page_items = reponseJSON.js?.maxPageItems?.toDouble()
@@ -468,7 +475,7 @@ class MacIPTVProvider : MainAPI() {
                     page_i++
                     val url =
                         "$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&fav=0&p=$page_i&JsHttpRequest=1-xml"
-                    response = app.get(url, headers = header, timeout = 3)
+                    response = app.get(url, headers = header, timeout = 10)
                     reponseJSON = if (response.text.takeLast(2) != "}}") {
                         tryParseJson<Root>("${response.text}}") ?: response.parsed()
                     } else {
@@ -482,7 +489,7 @@ class MacIPTVProvider : MainAPI() {
             var b_new: String
             var newgroupMedia: Boolean
             val home = arraymediaPlaylist.mapNotNull { media ->
-                val b = media.title.uppercase().replace(codeCountry, " ").replace(":", " ").trim()//
+                val b = media.title.uppercase().replace(rgxcodeCountry, " ").trim()//
                 b_new = b.take(4)
                 newgroupMedia = true
                 for (nameMedia in groupMedia) {
@@ -496,9 +503,10 @@ class MacIPTVProvider : MainAPI() {
                 ) {
                     groupMedia.add(b_new)
                     val groupName =
-                        media.title.replace("""\s\d""".toRegex(), "").replace("""FHD""", "")
-                            .replace("""UHD""", "").replace(""":""", "")
-                            .replace("""$codeCountry """, "")
+                        media.title.uppercase().replace("""\s\d""".toRegex(), "")
+                            .replace("""FHD""", "")
+                            .replace("""UHD""", "")
+                            .replace(rgxcodeCountry, "")
                             .replace("""HD""", "").trim()
                     LiveSearchResponse(
                         groupName,
@@ -511,10 +519,23 @@ class MacIPTVProvider : MainAPI() {
                     null
                 }
             }
-            if (categoryTitle.contains(codeCountry)) {
-                var nameGenre = categoryTitle + " \uD83C\uDDE8\uD83C\uDDF5"
-                nameGenre = nameGenre.replace("$codeCountry ", "").trim()
+            if (categoryTitle.uppercase().contains(rgxcodeCountry)) {
+                val FR = findCountryId("FR")
+                val US = findCountryId("US")
+                val UK = findCountryId("UK")
+                val flag = when (categoryTitle.contains(rgxcodeCountry)) {
+                    categoryTitle.uppercase()
+                        .contains(FR) -> " \uD83C\uDDE8\uD83C\uDDF5"
+                    categoryTitle.uppercase()
+                        .contains(US) -> " \uD83C\uDDFA\uD83C\uDDF8"
+                    categoryTitle.uppercase()
+                        .contains(UK) -> " \uD83C\uDDEC\uD83C\uDDE7"
+                    else -> ""
+                }
+                var nameGenre = categoryTitle + flag
+                nameGenre = nameGenre.uppercase().replace(rgxcodeCountry, "").trim()
                 arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
+
             }
 
         }
