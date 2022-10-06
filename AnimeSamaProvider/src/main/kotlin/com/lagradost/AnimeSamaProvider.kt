@@ -271,6 +271,8 @@ class AnimeSamaProvider : MainAPI() {
         val linkBack =
             rgxGetLink.find(textLinkBack)!!.groupValues.get(0).replace("'", "").replace(",", "")
         val documentBack = app.get(linkBack).document
+        val description = documentBack.select("div.carousel-caption > p")[0].text()
+        val poster = documentBack.select("img.d-block.w-100")[0].attr("src")
 
         val url_scriptEp = if (url.takeLast(1) != "/") {
             "$url/$scpritAllEpisode"
@@ -388,7 +390,7 @@ class AnimeSamaProvider : MainAPI() {
                         indexContent = 0
                         dataLoop = loopLookingforEpisodeTitle(dataLoop, dataset)
                         groupurl = episodesLink[line]
-                        link_poster = groupurl.findPosterfromEmbedUrl()
+                        link_poster = poster//groupurl.findPosterfromEmbedUrl()
                         episodes.add(
                             Episode(
                                 data = groupurl,
@@ -415,8 +417,6 @@ class AnimeSamaProvider : MainAPI() {
         }
         //episodes.apmap { episode -> episode.posterUrl = episode.data.findPosterfromEmbedUrl() }
 
-        val description = documentBack.select("div.carousel-caption > p")[0].text()
-        val poster = documentBack.select("img.d-block.w-100")[0].attr("src")
 
         val recommendations = documentBack.select("div.synsaisons > li")
         allresultshome.clear()
