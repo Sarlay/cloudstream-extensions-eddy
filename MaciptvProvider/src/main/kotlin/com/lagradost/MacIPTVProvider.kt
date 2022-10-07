@@ -502,37 +502,29 @@ class MacIPTVProvider : MainAPI() {
             "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"//&force_ch_link_check=&JsHttpRequest=1-xml
         var responseGetgenre = app.get(url, headers = header)
 
-        /*  val urlGetallchannels ="$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
-          var responseAllchannels = app.get(urlGetallchannels, headers = header)
-          val responseAllchannelstoJson = responseAllchannels.parsed<Root>()
-        */
+        val urlGetallchannels =
+            "$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
+        var responseAllchannels = app.get(urlGetallchannels, headers = header)
 
-        val responseGetgenretoJSON = responseGetgenre.parsed<JsonGetGenre>()
+        val responseAllchannelstoJSON = responseAllchannels.parsed<Root>()
+        val responseGetGenretoJSON = responseGetgenre.parsed<JsonGetGenre>()
 
-        responseGetgenretoJSON.js.apmap { js ->
+        responseGetGenretoJSON.js.forEach { js ->
             val idGenre = js.id
             val categoryTitle = js.title.toString()
 
             if (idGenre!!.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
                     .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountry))
             ) {
-                var page_i = 1
-                val url =
-                    "$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&fav=0&p=$page_i&JsHttpRequest=1-xml"
-                var response = app.get(url, headers = header, timeout = 10)
-                var reponseJSON = response.parsed<Root>()
-                val total_items = reponseJSON.js?.totalItems
-                val max_page_items = reponseJSON.js?.maxPageItems?.toDouble()
-                val pages = ceil(total_items!!.toDouble() / max_page_items!!.toDouble()).toInt()
-                while (page_i <= pages) {
-                    val data = reponseJSON.js?.data
-                    data?.forEach { value ->
-                        val name = value.name.toString()
-                        val tv_genre_id = value.tvGenreId
-                        val idCH = value.id
+                responseAllchannelstoJSON.js!!.data.forEach { data ->
+                    if (data.tvGenreId!!.contains("""\d""".toRegex())
+                    ) {
+                        val name = data.name.toString()
+                        val tv_genre_id = data.tvGenreId
+                        val idCH = data.id
                         val link = "http://localhost/ch/$idCH" + "_"
-                        val logo = value.logo?.replace("""\""", "")
-                        val ch_id = value.cmds[0].chId
+                        val logo = data.logo?.replace("""\""", "")
+                        val ch_id = data.cmds[0].chId
                         arraymediaPlaylist.add(
                             channel(
                                 name,
@@ -545,15 +537,6 @@ class MacIPTVProvider : MainAPI() {
                             )
                         )
 
-                    }
-                    page_i++
-                    val url =
-                        "$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&fav=0&p=$page_i&JsHttpRequest=1-xml"
-                    response = app.get(url, headers = header, timeout = 10)
-                    reponseJSON = if (response.text.takeLast(2) != "}}") {
-                        tryParseJson<Root>("${response.text}}") ?: response.parsed()
-                    } else {
-                        response.parsed()
                     }
                 }
             }
