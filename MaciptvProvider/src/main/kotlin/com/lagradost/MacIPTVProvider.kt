@@ -157,7 +157,7 @@ class MacIPTVProvider : MainAPI() {
         val allresultshome: MutableList<SearchResponse> = mutableListOf()
         for (media in arraymediaPlaylist) {
             val keyId = "/-${media.id}-"
-            if (url.contains(keyId)) {
+            if (url.contains(keyId) || url == media.url) {
                 val epg_url =
                     "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${media.ch_id}&size=10&JsHttpRequest=1-xml" // descriptif
                 var response = app.get(epg_url, headers = header)
