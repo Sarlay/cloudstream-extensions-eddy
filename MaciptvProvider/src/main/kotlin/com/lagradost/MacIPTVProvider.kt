@@ -467,6 +467,16 @@ class MacIPTVProvider : MainAPI() {
             .replace("""HD""", "").trim()
     }
 
+    private fun isSelectedCountry(sequence: String, listCountry: List<String>): Boolean {
+        var exist = false
+        listCountry.forEach { it ->
+            if (sequence.uppercase().contains(it)) {
+                exist = true
+            }
+        }
+        return exist
+    }
+
     private fun getFlag(sequence: String): String {
         val FR = findCountryId("FR")
         val US = findCountryId("US")
@@ -483,6 +493,7 @@ class MacIPTVProvider : MainAPI() {
         return flag
     }
 
+    val listCountry = arrayListOf("FRENCH", "FRANCE")
     val rgxcodeCountry = findCountryId(codeCountry)
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
@@ -502,8 +513,8 @@ class MacIPTVProvider : MainAPI() {
             val idGenre = js.id
             val categoryTitle = js.title.toString()
 
-            if (idGenre!!.contains("""\d""".toRegex()) && categoryTitle.uppercase()
-                    .contains(rgxcodeCountry)
+            if (idGenre!!.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
+                    .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountry))
             ) {
                 var page_i = 1
                 val url =
@@ -578,7 +589,9 @@ class MacIPTVProvider : MainAPI() {
                     null
                 }
             }
-            if (categoryTitle.uppercase().contains(rgxcodeCountry)) {
+            if ((categoryTitle.uppercase()
+                    .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountry))
+            ) {
                 val flag = getFlag(categoryTitle)
                 var nameGenre = flag + cleanTitle(categoryTitle)
                 arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
