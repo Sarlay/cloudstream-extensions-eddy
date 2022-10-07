@@ -15,6 +15,7 @@ class FrenchStreamProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "fr"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
+
     override suspend fun search(query: String): List<SearchResponse> {
         val link = "$mainUrl/?do=search&subaction=search&story=$query" // search'
         val document =
@@ -287,9 +288,17 @@ class FrenchStreamProvider : MainAPI() {
         Pair("$mainUrl/film/documentaire/page/", "Documentaire")
 
     )
-
+    private var ismainUrlChecked = false
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = request.data + page
+        if (!ismainUrlChecked) {
+            ismainUrlChecked = true
+            val document = app.get(mainUrl).document
+            val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
+            if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("french-stream")) {
+                mainUrl = newMainUrl
+            }
+        }
         val document = app.get(url).document
         val movies = document.select("div#dle-content > div.short")
 
