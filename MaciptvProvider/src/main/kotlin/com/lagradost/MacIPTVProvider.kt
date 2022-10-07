@@ -7,15 +7,15 @@ import okhttp3.Interceptor
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.runBlocking
-import java.lang.Float.POSITIVE_INFINITY
 
 import java.lang.Math.ceil
 
 
 class MacIPTVProvider : MainAPI() {
     private val defaulmac_adresse =
-        "mac=00:1A:79:A7:9E:ED"//"mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
-    private val defaultmainUrl = "http://matrix-ott.tv:8080"//"http://ultra-box.club" //
+        "mac=00:1A:79:17:76:37"//"mac=00:1A:79:17:76:37" for "http://mediatitans.watch:8880" and "mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
+    private val defaultmainUrl =
+        "http://mediatitans.watch:8880"// "http://matrix-ott.tv:8080"//"http://ultra-box.club" //
     override var name = "BoxIPTV"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
@@ -165,12 +165,19 @@ class MacIPTVProvider : MainAPI() {
                 description = getEpg(response.text)
                 link = media.url
                 title = media.title
-                val a = title.uppercase().replace(rgxcodeCountry, " ").trim()//
+                val a = title.uppercase().replace("""\s\d""".toRegex(), "")
+                    .replace("""FHD""", "")
+                    .replace("""UHD""", "")
+                    .replace(rgxcodeCountry, "")
+                    .replace("""HD""", "").trim()//
                 posterUrl = media.url_image.toString()
                 var b_new: String
                 arraymediaPlaylist.apmap { channel ->
-                    val b = channel.title.uppercase().replace(rgxcodeCountry, " ")
-                        .trim()//
+                    val b = channel.title.uppercase().replace("""\s\d""".toRegex(), "")
+                        .replace("""FHD""", "")
+                        .replace("""UHD""", "")
+                        .replace(rgxcodeCountry, "")
+                        .replace("""HD""", "").trim()
                     b_new = b.take(4)
                     if (a.take(4).contains(b_new) && media.tv_genre_id == channel.tv_genre_id) {
                         val epg_url =
@@ -182,13 +189,11 @@ class MacIPTVProvider : MainAPI() {
                         val posterurl = channel.url_image.toString()
                         showlist.add(
                             Episode(
-                                streamurl,
-                                channelname,
-                                null,
-                                null,
-                                posterurl,
-                                null,
-                                descript
+                                data = streamurl,
+                                episode = null,
+                                name = channelname,
+                                posterUrl = posterurl,
+                                description = descript
                             )
                         )
                     }
@@ -199,6 +204,11 @@ class MacIPTVProvider : MainAPI() {
             }
 
         }
+        title.uppercase().replace("""\s\d""".toRegex(), "")
+            .replace("""FHD""", "")
+            .replace("""UHD""", "")
+            .replace(rgxcodeCountry, "")
+            .replace("""HD""", "").trim()
         if (showlist.size >= 2) {
             description =
                 "Veuillez à bien chercher et sélectionner votre chaîne afin de regarder votre émission en direct"
@@ -242,6 +252,8 @@ class MacIPTVProvider : MainAPI() {
                         "$mainUrl/portal.php?type=itv&action=create_link&cmd=ffmpeg%20http://localhost/ch/$chID&series=&forced_storage=0&disable_ad=0&download=0&force_ch_link_check=0&JsHttpRequest=1-xml"
 
                     var link: String
+                    val redirectlink: String
+                    var lien: String
                     runBlocking {
                         val header = getAuthHeader()
                         val getTokenLink = app.get(TokenLink, headers = header).text
@@ -251,10 +263,22 @@ class MacIPTVProvider : MainAPI() {
                                 """\""",
                                 ""
                             )
+                        lien = link
+                        if (link.contains("extension")) {
+                            val headerlocation = app.get(
+                                link,
+                                allowRedirects = false
+                            ).headers
+                            val redirectlink = headerlocation.get("location")
+                                .toString()
+                            if (redirectlink != "null") {
+                                lien = redirectlink
+                            }
+                        }
                     }
 
                     val newRequest = chain.request()
-                        .newBuilder().url(link).build()
+                        .newBuilder().url(lien).build()
                     return chain.proceed(newRequest)
                 } else {
                     return chain.proceed(chain.request())
@@ -278,21 +302,39 @@ class MacIPTVProvider : MainAPI() {
         val regexGetLink = Regex("""(http.*)\"\},""")
         val link =
             regexGetLink.find(getTokenLink)?.groupValues?.get(1).toString().replace("""\""", "")
-        /*val headerlocation = app.get(
-            link,
-            allowRedirects = false
-        ).headers
-        val tslink= headerlocation.get("location")
-            .toString()*/
 
+
+        val head = mapOf(
+            "Accept" to "*/*",
+            "Accept-Language" to "en_US",
+            "User-Agent" to "VLC/3.0.18 LibVLC/3.0.18",
+            "Range" to "bytes=0-"
+        )
+
+
+        var lien = link
+        if (link.contains("extension")) {
+            val headerlocation = app.get(
+                link,
+                allowRedirects = false
+            ).headers
+            val redirectlink = headerlocation.get("location")
+                .toString()
+
+            if (redirectlink != "null") {
+                lien = redirectlink
+            }
+        }
+        val isM3u8 = false// lien.contains("extension=ts")
         callback.invoke(
             ExtractorLink(
                 name,
                 name,
-                link,
+                lien,
                 mainUrl,
                 Qualities.Unknown.value,
-                isM3u8 = false,
+                isM3u8 = isM3u8,
+                headers = head
             )
         )
 
@@ -415,7 +457,7 @@ class MacIPTVProvider : MainAPI() {
 
     )
 
-    private val codeCountry = "FR|US|UK" // Try US UK BR
+    private val codeCountry = "FR"//|US|UK" // Try US UK BR
     private fun findCountryId(codeCountry: String): Regex {
         return """(?:^|\W+|\s)+($codeCountry)(?:\s|\W+|${'$'}|\|)+""".toRegex()
     }
