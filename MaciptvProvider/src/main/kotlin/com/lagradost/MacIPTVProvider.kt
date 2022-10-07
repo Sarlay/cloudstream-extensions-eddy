@@ -455,7 +455,7 @@ class MacIPTVProvider : MainAPI() {
 
     )
 
-    private val codeCountry = "FR|US|UK"//|US|UK" // Try US UK BR
+    private val codeCountry = "FR|US|USA"//|US|UK" // Try US UK BR
     private fun findCountryId(codeCountry: String): Regex {
         return """(?:^|\W+|\s)+($codeCountry)(?:\s|\W+|${'$'}|\|)+""".toRegex()
     }
@@ -498,16 +498,18 @@ class MacIPTVProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
         val header = getAuthHeader()
+        ////////////////////////// GET ALL GENRES
         val url =
             "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"//&force_ch_link_check=&JsHttpRequest=1-xml
         var responseGetgenre = app.get(url, headers = header)
-
+        val responseGetGenretoJSON = responseGetgenre.parsed<JsonGetGenre>()
+        ////////////////////////// GET ALL CHANNELS
         val urlGetallchannels =
             "$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
         var responseAllchannels = app.get(urlGetallchannels, headers = header)
 
         val responseAllchannelstoJSON = responseAllchannels.parsed<Root>()
-        val responseGetGenretoJSON = responseGetgenre.parsed<JsonGetGenre>()
+
 
         responseGetGenretoJSON.js.forEach { js ->
             val idGenre = js.id
@@ -517,26 +519,29 @@ class MacIPTVProvider : MainAPI() {
                     .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountry))
             ) {
                 responseAllchannelstoJSON.js!!.data.forEach { data ->
-                    if (data.tvGenreId!!.contains("""\d""".toRegex())
-                    ) {
-                        val name = data.name.toString()
-                        val tv_genre_id = data.tvGenreId
-                        val idCH = data.id
-                        val link = "http://localhost/ch/$idCH" + "_"
-                        val logo = data.logo?.replace("""\""", "")
-                        val ch_id = data.cmds[0].chId
-                        arraymediaPlaylist.add(
-                            channel(
-                                name,
-                                link,
-                                logo,
-                                "",
-                                idCH,
-                                tv_genre_id,
-                                ch_id
-                            )
-                        )
+                    val genre = data.tvGenreId
 
+                    if (genre != null) {
+                        if (genre == idGenre) {
+                            val name = data.name.toString()
+                            val tv_genre_id = data.tvGenreId
+                            val idCH = data.id
+                            val link = "http://localhost/ch/$idCH" + "_"
+                            val logo = data.logo?.replace("""\""", "")
+                            val ch_id = data.cmds[0].chId
+                            arraymediaPlaylist.add(
+                                channel(
+                                    name,
+                                    link,
+                                    logo,
+                                    "",
+                                    idCH,
+                                    tv_genre_id,
+                                    ch_id
+                                )
+                            )
+
+                        }
                     }
                 }
             }
@@ -576,7 +581,7 @@ class MacIPTVProvider : MainAPI() {
                     .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountry))
             ) {
                 val flag = getFlag(categoryTitle)
-                var nameGenre = flag + cleanTitle(categoryTitle)
+                var nameGenre = "$flag ${cleanTitle(categoryTitle)}"
                 arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
             }
 
