@@ -1,6 +1,5 @@
 package com.lagradost
 
-import android.webkit.CookieManager
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import okhttp3.Interceptor
@@ -149,13 +148,13 @@ class MacIPTVProvider : MainAPI() {
      */
 
     override suspend fun load(url: String): LoadResponse {
-        CookieManager.getInstance().removeAllCookies(null)
-        val showlist = ArrayList<Episode>()
+
         var link = ""
         var title = ""
         var posterUrl = ""
         var description = ""
         val header = getAuthHeader()
+        val allresultshome: MutableList<SearchResponse> = mutableListOf()
         for (media in arraymediaPlaylist) {
             val keyId = "/-${media.id}-"
             if (url.contains(keyId)) {
@@ -165,21 +164,13 @@ class MacIPTVProvider : MainAPI() {
                 description = getEpg(response.text)
                 link = media.url
                 title = media.title
-                val a = title.uppercase().replace("""\s\d""".toRegex(), "")
-                    .replace("""FHD""", "")
-                    .replace("""UHD""", "")
-                    .replace(rgxcodeCountry, "")
-                    .replace("""HD""", "").trim()//
+                val a = cleanTitle(title)
                 posterUrl = media.url_image.toString()
                 var b_new: String
                 arraymediaPlaylist.apmap { channel ->
-                    val b = channel.title.uppercase().replace("""\s\d""".toRegex(), "")
-                        .replace("""FHD""", "")
-                        .replace("""UHD""", "")
-                        .replace(rgxcodeCountry, "")
-                        .replace("""HD""", "").trim()
-                    b_new = b.take(4)
-                    if (a.take(4).contains(b_new) && media.tv_genre_id == channel.tv_genre_id) {
+                    val b = cleanTitle(channel.title)
+                    b_new = b.take(6)
+                    if (a.take(6).contains(b_new) && media.tv_genre_id == channel.tv_genre_id) {
                         val epg_url =
                             "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${channel.ch_id}&size=10&JsHttpRequest=1-xml" // descriptif
                         var response0 = app.get(epg_url, headers = header)
@@ -187,15 +178,25 @@ class MacIPTVProvider : MainAPI() {
                         val streamurl = channel.url
                         val channelname = channel.title
                         val posterurl = channel.url_image.toString()
-                        showlist.add(
-                            Episode(
-                                data = streamurl,
-                                episode = null,
+                        allresultshome.add(
+                            LiveSearchResponse(
                                 name = channelname,
+                                url = streamurl,
+                                name,
+                                TvType.Live,
                                 posterUrl = posterurl,
-                                description = descript
                             )
                         )
+
+                        /*   showlist.add(
+                               Episode(
+                                   data = streamurl,
+                                   episode = null,
+                                   name = channelname,
+                                   posterUrl = posterurl,
+                                   description = descript
+                               )
+                           )*/
                     }
 
                 }
@@ -204,23 +205,20 @@ class MacIPTVProvider : MainAPI() {
             }
 
         }
-        title.uppercase().replace("""\s\d""".toRegex(), "")
-            .replace("""FHD""", "")
-            .replace("""UHD""", "")
-            .replace(rgxcodeCountry, "")
-            .replace("""HD""", "").trim()
-        if (showlist.size >= 2) {
-            description =
-                "Veuillez à bien chercher et sélectionner votre chaîne afin de regarder votre émission en direct"
-            return newTvSeriesLoadResponse(
-                title,
-                "",
-                TvType.TvSeries,
-                showlist,
-            ) {
-                this.posterUrl = posterUrl
-                this.plot = description
-            }
+        //title = cleanTitle(title)
+
+        if (allresultshome.size >= 2) {
+            description = description
+            val recommendation = allresultshome
+            return LiveStreamLoadResponse(
+                name = title,
+                url = link,
+                apiName = this.name,
+                dataUrl = link,
+                posterUrl = posterUrl,
+                plot = description,
+                recommendations = recommendation
+            )
         } else {
             return LiveStreamLoadResponse(
                 name = title,
@@ -457,9 +455,32 @@ class MacIPTVProvider : MainAPI() {
 
     )
 
-    private val codeCountry = "FR"//|US|UK" // Try US UK BR
+    private val codeCountry = "FR|US|UK"//|US|UK" // Try US UK BR
     private fun findCountryId(codeCountry: String): Regex {
         return """(?:^|\W+|\s)+($codeCountry)(?:\s|\W+|${'$'}|\|)+""".toRegex()
+    }
+
+    private fun cleanTitle(title: String): String {
+        return title.uppercase().replace("""\s\d""".toRegex(), "").replace("""FHD""", "")
+            .replace("""UHD""", "").replace(rgxcodeCountry, "").replace("""HEVC""", "")
+            .replace("""HDR""", "")
+            .replace("""HD""", "").trim()
+    }
+
+    private fun getFlag(sequence: String): String {
+        val FR = findCountryId("FR")
+        val US = findCountryId("US")
+        val UK = findCountryId("UK")
+        val flag = when (sequence.contains(rgxcodeCountry)) {
+            sequence.uppercase()
+                .contains(FR) -> " \uD83C\uDDE8\uD83C\uDDF5"
+            sequence.uppercase()
+                .contains(US) -> " \uD83C\uDDFA\uD83C\uDDF8"
+            sequence.uppercase()
+                .contains(UK) -> " \uD83C\uDDEC\uD83C\uDDE7"
+            else -> ""
+        }
+        return flag
     }
 
     val rgxcodeCountry = findCountryId(codeCountry)
@@ -531,8 +552,8 @@ class MacIPTVProvider : MainAPI() {
             var b_new: String
             var newgroupMedia: Boolean
             val home = arraymediaPlaylist.mapNotNull { media ->
-                val b = media.title.uppercase().replace(rgxcodeCountry, " ").trim()//
-                b_new = b.take(4)
+                val b = cleanTitle(media.title)//
+                b_new = b.take(6)
                 newgroupMedia = true
                 for (nameMedia in groupMedia) {
                     if (nameMedia.contains(b_new)) {
@@ -544,12 +565,8 @@ class MacIPTVProvider : MainAPI() {
                 if (page == 1 && (media.tv_genre_id == idGenre) && newgroupMedia
                 ) {
                     groupMedia.add(b_new)
-                    val groupName =
-                        media.title.uppercase().replace("""\s\d""".toRegex(), "")
-                            .replace("""FHD""", "")
-                            .replace("""UHD""", "")
-                            .replace(rgxcodeCountry, "")
-                            .replace("""HD""", "").trim()
+                    val groupName = cleanTitle(media.title)
+
                     LiveSearchResponse(
                         groupName,
                         "$mainUrl/-${media.id}-",
@@ -562,22 +579,9 @@ class MacIPTVProvider : MainAPI() {
                 }
             }
             if (categoryTitle.uppercase().contains(rgxcodeCountry)) {
-                val FR = findCountryId("FR")
-                val US = findCountryId("US")
-                val UK = findCountryId("UK")
-                val flag = when (categoryTitle.contains(rgxcodeCountry)) {
-                    categoryTitle.uppercase()
-                        .contains(FR) -> " \uD83C\uDDE8\uD83C\uDDF5"
-                    categoryTitle.uppercase()
-                        .contains(US) -> " \uD83C\uDDFA\uD83C\uDDF8"
-                    categoryTitle.uppercase()
-                        .contains(UK) -> " \uD83C\uDDEC\uD83C\uDDE7"
-                    else -> ""
-                }
-                var nameGenre = categoryTitle + flag
-                nameGenre = nameGenre.uppercase().replace(rgxcodeCountry, "").trim()
+                val flag = getFlag(categoryTitle)
+                var nameGenre = flag + cleanTitle(categoryTitle)
                 arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
-
             }
 
         }
