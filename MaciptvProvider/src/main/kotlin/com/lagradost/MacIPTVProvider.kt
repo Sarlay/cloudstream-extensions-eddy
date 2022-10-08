@@ -7,7 +7,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.runBlocking
 
-import java.lang.Math.ceil
 
 
 class MacIPTVProvider : MainAPI() {
@@ -422,7 +421,17 @@ class MacIPTVProvider : MainAPI() {
          @JsonProperty("pvr") var pvr: Int? = null*/
 
     )
+    data class JsInfo (
 
+        @JsonProperty("mac"   ) var mac   : String? = null,
+        @JsonProperty("phone" ) var phone : String? = null
+
+    )
+    data class GetExpiration (
+
+        @JsonProperty("js" ) var js : JsInfo? = JsInfo()
+
+    )
     data class Js(
 
         @JsonProperty("total_items") var totalItems: Int? = null,
@@ -498,6 +507,10 @@ class MacIPTVProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
         val header = getAuthHeader()
+        val url_info = "$mainUrl/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml"
+        val reponseGetInfo = app.get(url_info, headers = header)
+        val infoExpirationJson =reponseGetInfo.parsed<GetExpiration>()
+        val expiration = infoExpirationJson.js?.phone
         ////////////////////////// GET ALL GENRES
         val url =
             "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"//&force_ch_link_check=&JsHttpRequest=1-xml
@@ -581,7 +594,7 @@ class MacIPTVProvider : MainAPI() {
                     .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountry))
             ) {
                 val flag = getFlag(categoryTitle)
-                var nameGenre = "$flag ${cleanTitle(categoryTitle)}"
+                var nameGenre = "$flag ${cleanTitle(categoryTitle)} ($expiration)"
                 arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
             }
 
