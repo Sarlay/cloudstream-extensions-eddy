@@ -8,7 +8,6 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.runBlocking
 
 
-
 class MacIPTVProvider : MainAPI() {
     private val defaulmac_adresse =
         "mac=00:1A:79:17:76:37"//"mac=00:1A:79:17:76:37" for "http://mediatitans.watch:8880" and "mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
@@ -421,17 +420,20 @@ class MacIPTVProvider : MainAPI() {
          @JsonProperty("pvr") var pvr: Int? = null*/
 
     )
-    data class JsInfo (
 
-        @JsonProperty("mac"   ) var mac   : String? = null,
-        @JsonProperty("phone" ) var phone : String? = null
+    data class JsInfo(
 
-    )
-    data class GetExpiration (
-
-        @JsonProperty("js" ) var js : JsInfo? = JsInfo()
+        @JsonProperty("mac") var mac: String? = null,
+        @JsonProperty("phone") var phone: String? = null
 
     )
+
+    data class GetExpiration(
+
+        @JsonProperty("js") var js: JsInfo? = JsInfo()
+
+    )
+
     data class Js(
 
         @JsonProperty("total_items") var totalItems: Int? = null,
@@ -490,7 +492,8 @@ class MacIPTVProvider : MainAPI() {
         val FR = findCountryId("FR")
         val US = findCountryId("US")
         val UK = findCountryId("UK")
-        val flag = when (sequence.contains(rgxcodeCountry)) {
+        var flag: String
+        flag = when (sequence.contains(rgxcodeCountry)) {
             sequence.uppercase()
                 .contains(FR) -> " \uD83C\uDDE8\uD83C\uDDF5"
             sequence.uppercase()
@@ -507,9 +510,10 @@ class MacIPTVProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
         val header = getAuthHeader()
-        val url_info = "$mainUrl/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml"
+        val url_info =
+            "$mainUrl/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml"
         val reponseGetInfo = app.get(url_info, headers = header)
-        val infoExpirationJson =reponseGetInfo.parsed<GetExpiration>()
+        val infoExpirationJson = reponseGetInfo.parsed<GetExpiration>()
         val expiration = infoExpirationJson.js?.phone
         ////////////////////////// GET ALL GENRES
         val url =
