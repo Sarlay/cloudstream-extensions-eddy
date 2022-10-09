@@ -493,7 +493,7 @@ class MacIPTVProvider : MainAPI() {
         val US = findCountryId("US|USA")
         val UK = findCountryId("UK")
         var flag: String
-        flag = when (sequence.contains(rgxcodeCountry)) {
+        flag = when (true) {
             sequence.uppercase()
                 .contains(FR) -> " \uD83C\uDDE8\uD83C\uDDF5"
             sequence.uppercase()
@@ -609,3 +609,4 @@ class MacIPTVProvider : MainAPI() {
         )
     }
 }
+
