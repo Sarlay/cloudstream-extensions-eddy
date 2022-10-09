@@ -490,7 +490,7 @@ class MacIPTVProvider : MainAPI() {
 
     private fun getFlag(sequence: String): String {
         val FR = findCountryId("FR")
-        val US = findCountryId("US")
+        val US = findCountryId("US|USA")
         val UK = findCountryId("UK")
         var flag: String
         flag = when (sequence.contains(rgxcodeCountry)) {
@@ -500,7 +500,7 @@ class MacIPTVProvider : MainAPI() {
                 .contains(US) -> " \uD83C\uDDFA\uD83C\uDDF8"
             sequence.uppercase()
                 .contains(UK) -> " \uD83C\uDDEC\uD83C\uDDE7"
-            else -> ""
+            else -> "|"
         }
         return flag
     }
