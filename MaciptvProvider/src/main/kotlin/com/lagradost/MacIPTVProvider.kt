@@ -590,10 +590,11 @@ class MacIPTVProvider : MainAPI() {
                     null
                 }
             }
+            var flag: String
             if ((categoryTitle.uppercase()
                     .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountry))
             ) {
-                val flag = getFlag(categoryTitle)
+                flag = getFlag(categoryTitle)
                 var nameGenre = "$flag ${cleanTitle(categoryTitle)} ($expiration)"
                 arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
             }
