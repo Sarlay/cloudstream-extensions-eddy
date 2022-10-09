@@ -464,7 +464,7 @@ class MacIPTVProvider : MainAPI() {
 
     )
 
-    private val codeCountry = "FR|US|USA"//|US|UK" // Try US UK BR
+    private val codeCountry = "FR"//|US|UK" // Try US UK BR
     private fun findCountryId(codeCountry: String): Regex {
         return """(?:^|\W+|\s)+($codeCountry)(?:\s|\W+|${'$'}|\|)+""".toRegex()
     }
@@ -502,7 +502,7 @@ class MacIPTVProvider : MainAPI() {
         return flag
     }
 
-    val listCountry = arrayListOf("FRENCH", "FRANCE")
+    val listCountry = arrayListOf("FRENCH", "FRANCE", "SPORT")
     val rgxcodeCountry = findCountryId(codeCountry)
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
