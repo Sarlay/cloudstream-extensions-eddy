@@ -489,18 +489,21 @@ class MacIPTVProvider : MainAPI() {
     }
 
     private fun getFlag(sequence: String): String {
-        val FR = findCountryId("FR")
+        val FR = findCountryId("FR|FRANCE|FRENCH")
         val US = findCountryId("US|USA")
+        val AR = findCountryId("AR|ARAB|ARABIC")
         val UK = findCountryId("UK")
         var flag: String
         flag = when (true) {
             sequence.uppercase()
-                .contains(FR) -> " \uD83C\uDDE8\uD83C\uDDF5"
+                .contains(FR) -> "\uD83C\uDDE8\uD83C\uDDF5"
             sequence.uppercase()
-                .contains(US) -> " \uD83C\uDDFA\uD83C\uDDF8"
+                .contains(US) -> "\uD83C\uDDFA\uD83C\uDDF8"
             sequence.uppercase()
-                .contains(UK) -> " \uD83C\uDDEC\uD83C\uDDE7"
-            else -> "|"
+                .contains(UK) -> "\uD83C\uDDEC\uD83C\uDDE7"
+            sequence.uppercase()
+                .contains(AR) -> " نظرة"
+            else -> ""
         }
         return flag
     }
@@ -609,4 +612,5 @@ class MacIPTVProvider : MainAPI() {
         )
     }
 }
+
 
