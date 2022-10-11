@@ -165,7 +165,7 @@ class MacIPTVProvider : MainAPI() {
                 val a = cleanTitle(title)
                 posterUrl = media.url_image.toString()
                 var b_new: String
-                arraymediaPlaylist.apmap { channel ->
+                arraymediaPlaylist.forEach { channel ->
                     val b = cleanTitle(channel.title)
                     b_new = b.take(6)
                     if (channel.id != media.id && a.take(6)
@@ -236,7 +236,6 @@ class MacIPTVProvider : MainAPI() {
                         "$mainUrl/portal.php?type=itv&action=create_link&cmd=ffmpeg%20http://localhost/ch/$chID&series=&forced_storage=0&disable_ad=0&download=0&force_ch_link_check=0&JsHttpRequest=1-xml"
 
                     var link: String
-                    val redirectlink: String
                     var lien: String
                     runBlocking {
                         val header = getAuthHeader()
