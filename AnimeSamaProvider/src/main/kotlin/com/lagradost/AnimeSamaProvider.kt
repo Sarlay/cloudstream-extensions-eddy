@@ -69,6 +69,32 @@ class AnimeSamaProvider : MainAPI() {
         //}
     }
 
+    private fun Element.toSearchResponse_all_rec(posterUrl: String?, link: String): SearchResponse {
+
+        val text = this.text()
+        val title = text
+        var dubstatus = if (title.lowercase().contains("vostfr")) {
+            EnumSet.of(DubStatus.Subbed)
+        } else {
+            EnumSet.of(DubStatus.Dubbed)
+        }
+        var tvtype = TvType.Anime
+        if (text.lowercase().contains("film")) {
+            tvtype = TvType.AnimeMovie
+        }
+
+        return newAnimeSearchResponse(
+            title,
+            link,
+            tvtype,
+            false,
+        ) {
+            this.posterUrl = posterUrl
+            this.dubStatus = dubstatus
+        }
+        //}
+    }
+
     private suspend fun Element.toSearchResponse1() {
         val figcaption = select(" div.media-body > div >a > h5").text()
         if (!figcaption.lowercase().trim().contains("scan")) {
@@ -287,7 +313,7 @@ class AnimeSamaProvider : MainAPI() {
         //////////////////////////////////////
         /////////////////////////////////////
         var idx_EpStart: Int
-        var link_poster = ""
+        var link_poster: String
         ///////////////////////////////////
         /////////////////////////////////
 
@@ -321,8 +347,6 @@ class AnimeSamaProvider : MainAPI() {
                 idxEndForLoop = 1
                 nbrEndloop = 0
             }
-            //idxEndForLoop = allEndForLoop.elementAt(idEndLoop).groupValues.get(1).toInt()
-
 
         } catch (e: Exception) {
             idx_EpStart = 1
@@ -421,7 +445,13 @@ class AnimeSamaProvider : MainAPI() {
         val recommendations = documentBack.select("div.synsaisons > li")
         allresultshome.clear()
         recommendations.forEach { saga ->
-            allresultshome.add(saga.toSearchResponse_all(poster))
+            val link_on_click = saga.attr("onclick")
+            val link =
+                regexGetlink.find(link_on_click)?.groupValues?.get(1)
+                    ?: throw ErrorLoadingException()
+            if (!(link.contains(url) or url.contains(link))) {
+                allresultshome.add(saga.toSearchResponse_all_rec(poster, link))
+            }
         }
 
         return newAnimeLoadResponse(
