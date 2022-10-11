@@ -10,9 +10,9 @@ import kotlinx.coroutines.runBlocking
 
 class MacIPTVProvider : MainAPI() {
     private val defaulmac_adresse =
-        "mac=00:1A:79:17:76:37"//"mac=00:1A:79:17:76:37" for "http://mediatitans.watch:8880" and "mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
+        "mac=00:1A:79:A7:9E:ED"//"mac=00:1A:79:17:76:37" for "http://mediatitans.watch:8880" and "mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
     private val defaultmainUrl =
-        "http://mediatitans.watch:8880"// "http://matrix-ott.tv:8080"//"http://ultra-box.club" //
+        "http://matrix-ott.tv:8080"// "http://matrix-ott.tv:8080"//"http://ultra-box.club" //
     override var name = "BoxIPTV"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
@@ -168,11 +168,9 @@ class MacIPTVProvider : MainAPI() {
                 arraymediaPlaylist.apmap { channel ->
                     val b = cleanTitle(channel.title)
                     b_new = b.take(6)
-                    if (a.take(6).contains(b_new) && media.tv_genre_id == channel.tv_genre_id) {
-                        val epg_url =
-                            "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${channel.ch_id}&size=10&JsHttpRequest=1-xml" // descriptif
-                        var response0 = app.get(epg_url, headers = header)
-                        var descript = getEpg(response0.text)
+                    if (channel.id != media.id && a.take(6)
+                            .contains(b_new) && media.tv_genre_id == channel.tv_genre_id
+                    ) {
                         val streamurl = channel.url
                         val channelname = channel.title
                         val posterurl = channel.url_image.toString()
@@ -186,15 +184,6 @@ class MacIPTVProvider : MainAPI() {
                             )
                         )
 
-                        /*   showlist.add(
-                               Episode(
-                                   data = streamurl,
-                                   episode = null,
-                                   name = channelname,
-                                   posterUrl = posterurl,
-                                   description = descript
-                               )
-                           )*/
                     }
 
                 }
@@ -203,7 +192,6 @@ class MacIPTVProvider : MainAPI() {
             }
 
         }
-        //title = cleanTitle(title)
 
         if (allresultshome.size >= 2) {
             description = description
@@ -474,7 +462,7 @@ class MacIPTVProvider : MainAPI() {
     private fun cleanTitle(title: String): String {
         return title.uppercase().replace("""\s\d""".toRegex(), "").replace("""FHD""", "")
             .replace("""UHD""", "").replace(rgxcodeCountry, "").replace("""HEVC""", "")
-            .replace("""HDR""", "")
+            .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
             .replace("""HD""", "").trim()
     }
 
@@ -612,5 +600,3 @@ class MacIPTVProvider : MainAPI() {
         )
     }
 }
-
-
