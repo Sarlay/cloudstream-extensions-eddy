@@ -32,7 +32,7 @@ class MacIPTVProvider : MainAPI() {
         val main = mainUrl.uppercase().trim()
         val localCredentials = loginMac
         val mac = localCredentials?.uppercase()?.trim()
-        if (main == "NONE" || main.isNullOrBlank() || mac == "NONE" || mac.isNullOrBlank()) {
+        if (main == "NONE" || main.isBlank() || mac == "NONE" || mac.isNullOrBlank()) {
             mainUrl = defaultmainUrl
             name = defaultname
             return mapOf(
