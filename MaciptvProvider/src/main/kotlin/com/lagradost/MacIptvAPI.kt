@@ -50,10 +50,12 @@ class MacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
         val data = getLatestLoginData() ?: run {
             MacIPTVProvider.overrideUrl = null
             MacIPTVProvider.loginMac = null
+            MacIPTVProvider.companionName = null
             return
         }
         MacIPTVProvider.overrideUrl = data.server?.removeSuffix("/")
         MacIPTVProvider.loginMac = data.password ?: ""
+        MacIPTVProvider.companionName = data.username
     }
 
     override suspend fun initialize() {
