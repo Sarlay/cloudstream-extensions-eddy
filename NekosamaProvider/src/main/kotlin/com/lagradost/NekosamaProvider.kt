@@ -69,8 +69,8 @@ class NekosamaProvider : MainAPI() {
             // Sorted by the best title matching
             val titlesSorted = titles.sortedBy { it ->
                 -FuzzySearch.ratio(
-                    it?.take(query.length + nCharQuery),
-                    query
+                    it?.lowercase()?.take(query.length + nCharQuery),
+                    query.lowercase()
                 )
             }
             return titlesSorted.elementAt(0)
@@ -88,8 +88,9 @@ class NekosamaProvider : MainAPI() {
             this.sortedBy {
                 val bestTitleMatching = it.titleObtainedBysortByQuery(query)
                 -FuzzySearch.ratio(
-                    bestTitleMatching?.take(query.length + nCharQuery) ?: bestTitleMatching,
-                    query
+                    bestTitleMatching?.lowercase()?.take(query.length + nCharQuery)
+                        ?: bestTitleMatching?.lowercase(),
+                    query.lowercase()
                 )
             }
         }
@@ -104,7 +105,10 @@ class NekosamaProvider : MainAPI() {
 
             this.sortedBy {
                 val name = it.name
-                -FuzzySearch.ratio(name.take(query.length + nCharQuery), query)
+                -FuzzySearch.ratio(
+                    name.lowercase().take(query.length + nCharQuery),
+                    query.lowercase()
+                )
             }
         }
     }
@@ -122,7 +126,7 @@ class NekosamaProvider : MainAPI() {
         listOf(
             "$mainUrl/animes-search-vf.json" to "(VF) ",
             "$mainUrl/animes-search-vostfr.json" to "(Vostfr) "
-        ).apmap {(url, version) ->
+        ).apmap { (url, version) ->
             val dubStatus = when (!version.isNullOrBlank()) {
                 version.contains("VF") -> DubStatus.Dubbed
                 version.contains("Vostfr") -> DubStatus.Subbed
@@ -233,10 +237,10 @@ class NekosamaProvider : MainAPI() {
         val infosList =
             document.selectFirst("div#anime-info-list")?.text()
         val isinfosList = !infosList.isNullOrBlank()
-        var year:Int?=null
+        var year: Int? = null
         if (isinfosList) {
             if (infosList!!.contains("movie")) mediaType = TvType.AnimeMovie
-             year =regexYear.find(infosList)!!.groupValues.get(1).toInt()
+            year = regexYear.find(infosList)!!.groupValues.get(1).toInt()
         }
 
         val description = document.selectFirst("div.synopsis > p")?.text()
