@@ -6,6 +6,7 @@ import okhttp3.Interceptor
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.runBlocking
+import me.xdrop.fuzzywuzzy.FuzzySearch
 
 
 class MacIPTVProvider : MainAPI() {
@@ -13,7 +14,7 @@ class MacIPTVProvider : MainAPI() {
         "mac=00:1A:79:A7:9E:ED"//"mac=00:1A:79:17:76:37" for "http://mediatitans.watch:8880" and "mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
     private val defaultmainUrl =
         "http://matrix-ott.tv:8080"// "http://matrix-ott.tv:8080"//"http://ultra-box.club" //
-    override var name = "BoxIPTV"
+    var defaultname = "BoxIPTV"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
     override var lang = "fr" // fournisseur est en francais
@@ -21,43 +22,43 @@ class MacIPTVProvider : MainAPI() {
         setOf(TvType.Live) // live
 
     companion object {
+        var companionName: String? = null
         var loginMac: String? = null
         var overrideUrl: String? = null
     }
 
     private fun getAuthHeader(): Map<String, String> {
-        val url = overrideUrl ?: defaultmainUrl
-        mainUrl = url
-        if (mainUrl == "NONE" || mainUrl.isBlank()) {
-            mainUrl = defaultmainUrl
-        }
-
+        mainUrl = overrideUrl.toString()
+        val main = mainUrl.uppercase().trim()
         val localCredentials = loginMac
-        if (localCredentials == null || localCredentials.trim() == "") {
+        val mac = localCredentials?.uppercase()?.trim()
+        if (main == "NONE" || main.isNullOrBlank() || mac == "NONE" || mac.isNullOrBlank()) {
+            mainUrl = defaultmainUrl
+            name = defaultname
             return mapOf(
                 "Cookie" to defaulmac_adresse,
                 "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
             )
         }
+        name = companionName ?: defaultname
 
-        val headerMac = mapOf(
+        return mapOf(
             "Cookie" to "mac=$localCredentials",
             "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
         )
-        return headerMac
     }
 
 
-    private fun getCloseMatches(sequence: String, items: Collection<String>): List<String> {
-        val a = sequence.trim().lowercase()
+    private fun List<Channel>.sortByname(query: String?): List<Channel> {
+        return if (query == null) {
+            // Return list to base state if no query
+            this.sortedBy { it.title }
+        } else {
 
-        return items.mapNotNull { item ->
-            val b = item.trim().lowercase()
-            if (b.contains(a))
-                item
-            else if (a.contains(b))
-                item
-            else null
+            this.sortedBy {
+                val name = cleanTitle(it.title)
+                -FuzzySearch.ratio(name.lowercase(), query.lowercase())
+            }
         }
     }
 
@@ -67,27 +68,21 @@ class MacIPTVProvider : MainAPI() {
     La recherche retourne une SearchResponse, qui peut être des classes suivants: AnimeSearchResponse, MovieSearchResponse, TorrentSearchResponse, TvSeriesSearchResponse
     Chaque classes nécessite des données différentes, mais a en commun le nom, le poster et l'url
      **/
+    private val resultsSearchNbr = 50
     override suspend fun search(query: String): List<SearchResponse> {
-        val results = getCloseMatches(query, arraymediaPlaylist.map { it.title })
+        /* val results = getCloseMatches(query, arraymediaPlaylist.map { it.title })*/
         val searchResutls = ArrayList<SearchResponse>()
-        var count = 0
-        for (media in arraymediaPlaylist) {
-            if (count == results.size) {
-                break
-            }
-            if (media.title == results[count]) {
-                searchResutls.add(
-                    LiveSearchResponse(
-                        media.title,
-                        mainUrl,
-                        media.title,
-                        TvType.Live,
-                        media.url_image,
-                    )
+        /* var count = 0*/
+        arraymediaPlaylist.sortByname(query).take(resultsSearchNbr).forEach { media ->
+            searchResutls.add(
+                LiveSearchResponse(
+                    media.title,
+                    mainUrl,
+                    media.title,
+                    TvType.Live,
+                    media.url_image,
                 )
-
-                ++count
-            }
+            )
         }
 
         return searchResutls
@@ -127,11 +122,11 @@ class MacIPTVProvider : MainAPI() {
         val reponseJSON_0 = tryParseJson<Root_epg>(response)
         var description = ""
         reponseJSON_0?.js?.forEach { epg_i ->
-            var name = epg_i.name
-            var descr = epg_i.descr
-            var t_time = epg_i.tTime
-            var t_time_to = epg_i.tTimeTo
-            var new_descr = "De $t_time à $t_time_to - $name : $descr"
+            val name = epg_i.name
+            val descr = epg_i.descr
+            val t_time = epg_i.tTime
+            val t_time_to = epg_i.tTimeTo
+            val new_descr = "De $t_time à $t_time_to - $name : $descr"
             if (!description.contains(new_descr)) {
                 description = "$description\n $new_descr"
             }
@@ -158,7 +153,7 @@ class MacIPTVProvider : MainAPI() {
             if (url.contains(keyId) || url == media.url) {
                 val epg_url =
                     "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${media.ch_id}&size=10&JsHttpRequest=1-xml" // descriptif
-                var response = app.get(epg_url, headers = header)
+                val response = app.get(epg_url, headers = header)
                 description = getEpg(response.text)
                 link = media.url
                 title = media.title
@@ -194,7 +189,6 @@ class MacIPTVProvider : MainAPI() {
         }
 
         if (allresultshome.size >= 2) {
-            description = description
             val recommendation = allresultshome
             return LiveStreamLoadResponse(
                 name = title,
@@ -325,9 +319,9 @@ class MacIPTVProvider : MainAPI() {
     }
 
 
-    private val arraymediaPlaylist = ArrayList<channel>()
+    private val arraymediaPlaylist = ArrayList<Channel>()
 
-    data class channel(
+    data class Channel(
         var title: String,
         var url: String,
         val url_image: String?,
@@ -460,9 +454,10 @@ class MacIPTVProvider : MainAPI() {
 
     private fun cleanTitle(title: String): String {
         return title.uppercase().replace("""\s\d""".toRegex(), "").replace("""FHD""", "")
+            .replace("""VIP""", "")
             .replace("""UHD""", "").replace(rgxcodeCountry, "").replace("""HEVC""", "")
             .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
-            .replace("""HD""", "").trim()
+            .replace("""HD""", "").replace(rgxcodeCountry, "").trim()
     }
 
     private fun isSelectedCountry(sequence: String, listCountry: List<String>): Boolean {
@@ -480,7 +475,7 @@ class MacIPTVProvider : MainAPI() {
         val US = findCountryId("US|USA")
         val AR = findCountryId("AR|ARAB|ARABIC")
         val UK = findCountryId("UK")
-        var flag: String
+        val flag: String
         flag = when (true) {
             sequence.uppercase()
                 .contains(FR) -> "\uD83C\uDDE8\uD83C\uDDF5"
@@ -495,7 +490,7 @@ class MacIPTVProvider : MainAPI() {
         return flag
     }
 
-    val listCountry = arrayListOf("FRENCH", "FRANCE", "SPORT")
+    val listCountryOrCat = arrayListOf("FRENCH", "FRANCE", "SPORT")
     val rgxcodeCountry = findCountryId(codeCountry)
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
@@ -507,13 +502,13 @@ class MacIPTVProvider : MainAPI() {
         val expiration = infoExpirationJson.js?.phone
         ////////////////////////// GET ALL GENRES
         val url =
-            "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"//&force_ch_link_check=&JsHttpRequest=1-xml
-        var responseGetgenre = app.get(url, headers = header)
+            "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"
+        val responseGetgenre = app.get(url, headers = header)
         val responseGetGenretoJSON = responseGetgenre.parsed<JsonGetGenre>()
         ////////////////////////// GET ALL CHANNELS
         val urlGetallchannels =
             "$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
-        var responseAllchannels = app.get(urlGetallchannels, headers = header)
+        val responseAllchannels = app.get(urlGetallchannels, headers = header)
 
         val responseAllchannelstoJSON = responseAllchannels.parsed<Root>()
 
@@ -523,7 +518,7 @@ class MacIPTVProvider : MainAPI() {
             val categoryTitle = js.title.toString()
 
             if (idGenre!!.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
-                    .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountry))
+                    .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountryOrCat))
             ) {
                 responseAllchannelstoJSON.js!!.data.forEach { data ->
                     val genre = data.tvGenreId
@@ -537,7 +532,7 @@ class MacIPTVProvider : MainAPI() {
                             val logo = data.logo?.replace("""\""", "")
                             val ch_id = data.cmds[0].chId
                             arraymediaPlaylist.add(
-                                channel(
+                                Channel(
                                     name,
                                     link,
                                     logo,
@@ -584,12 +579,12 @@ class MacIPTVProvider : MainAPI() {
                     null
                 }
             }
-            var flag: String
+            val flag: String
             if ((categoryTitle.uppercase()
-                    .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountry))
+                    .contains(rgxcodeCountry) || isSelectedCountry(categoryTitle, listCountryOrCat))
             ) {
                 flag = getFlag(categoryTitle)
-                var nameGenre = "$flag ${cleanTitle(categoryTitle)} ($expiration)"
+                val nameGenre = "$flag ${cleanTitle(categoryTitle)} (⏳ $expiration)"
                 arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
             }
 
