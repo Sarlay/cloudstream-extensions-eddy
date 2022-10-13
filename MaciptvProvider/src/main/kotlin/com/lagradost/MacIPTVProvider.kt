@@ -14,7 +14,7 @@ class MacIPTVProvider : MainAPI() {
         "mac=00:1A:79:A7:9E:ED"//"mac=00:1A:79:17:76:37" for "http://mediatitans.watch:8880" and "mac=00:1A:79:A7:9E:ED" for "http://matrix-ott.tv:8080" and mac=00:1A:79:6C:CD:C8 for http://ultra-box.club/
     private val defaultmainUrl =
         "http://matrix-ott.tv:8080"// "http://matrix-ott.tv:8080"//"http://ultra-box.club" //
-    var defaultname = "BoxIPTV"
+    var defaultname = "BoxIPTV-MatrixOTT"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
     override var lang = "fr" // fournisseur est en francais
