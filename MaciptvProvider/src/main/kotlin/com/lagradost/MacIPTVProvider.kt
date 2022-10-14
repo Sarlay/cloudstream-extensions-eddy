@@ -11,9 +11,9 @@ import me.xdrop.fuzzywuzzy.FuzzySearch
 
 class MacIPTVProvider : MainAPI() {
     private val defaulmac_adresse =
-        "mac=00:1A:79:02:12:F4"
+        "mac=00:1a:79:a7:9e:ed"
     private val defaultmainUrl =
-        "http://ky-iptv.com:25461/portalstb"
+        "http://matrix-ott.tv:8080"
     var defaultname = "BoxIPTV-MatrixOTT"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
