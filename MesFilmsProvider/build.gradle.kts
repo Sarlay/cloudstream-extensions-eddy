@@ -21,5 +21,5 @@ cloudstream {
         "Movie",
     )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=mesfilms.lol&sz=%size%"
+    iconUrl = "https://mesfilms.lol/wp-content/uploads/2021/08/mflogo_round.png"
 }
