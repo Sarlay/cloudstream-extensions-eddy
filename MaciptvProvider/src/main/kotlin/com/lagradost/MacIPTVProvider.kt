@@ -15,6 +15,7 @@ class MacIPTVProvider : MainAPI() {
     private val defaultmainUrl =
         "http://matrix-ott.tv:8080"
     var defaultname = "BoxIPTV-MatrixOTT"
+    override var name = "Box Iptv"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
     override var lang = "fr" // fournisseur est en francais
@@ -58,7 +59,7 @@ class MacIPTVProvider : MainAPI() {
                 "Authorization" to "Bearer $key",
             )
         }
-        name = companionName ?: defaultname
+        name = companionName ?: name
         if (!init) {
             val url_key = "$mainUrl/portal.php?type=stb&action=handshake&JsHttpRequest=1-xml"
             val reponseGetkey = app.get(
@@ -556,8 +557,7 @@ class MacIPTVProvider : MainAPI() {
             val responseAllchannels = app.get(urlGetallchannels, headers = header)
 
             val responseAllchannelstoJSON = responseAllchannels.parsed<Root>()
-
-
+            var firstCat = true
             responseGetGenretoJSON.js.forEach { js ->
                 val idGenre = js.id
                 val categoryTitle = js.title.toString()
@@ -634,8 +634,15 @@ class MacIPTVProvider : MainAPI() {
                         listCountryOrCat
                     ))
                 ) {
+
+
                     flag = getFlag(categoryTitle)
-                    val nameGenre = "$flag ${cleanTitle(categoryTitle)} (⏳ $expiration)"
+                    val nameGenre = if (firstCat) {
+                        firstCat = false
+                        "$flag ${cleanTitle(categoryTitle)} \uD83D\uDCFA $name \uD83D\uDCFA (⏳ $expiration)"
+                    } else {
+                        "$flag ${cleanTitle(categoryTitle)}"
+                    }
                     arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
                 }
 
