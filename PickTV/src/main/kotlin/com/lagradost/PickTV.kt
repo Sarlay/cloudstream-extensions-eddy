@@ -319,27 +319,26 @@ class PickTV : MainAPI() {
                         val b = cleanTitle(media.title)//
                         b_new = b.take(takeN)
                         newgroupMedia = true
+                        mediaGenre = cleanTitle(media.genre.toString())
                         for (nameMedia in groupMedia) {
-                            if (nameMedia.contains(b_new)) {
+                            if (nameMedia.contains(b_new) && (mediaGenre == category)) {
                                 newgroupMedia = false
                                 break
                             }
                         }
-                        groupMedia.contains(b_new)
-                        mediaGenre = cleanTitle(media.genre.toString())
                         if (newgroupMedia && (mediaGenre == category)
                         ) {
 
                             groupMedia.add(b_new)
                             val groupName = "${cleanTitle(media.title)}"
+                            val posterUrl = media.url_image
 
                             LiveSearchResponse(
                                 groupName,
                                 media.url,
                                 media.title,
                                 TvType.Live,
-                                media.url_image,
-                                lang = media.lang?.lowercase(),
+                                posterUrl,
                             )
                         } else {
                             null

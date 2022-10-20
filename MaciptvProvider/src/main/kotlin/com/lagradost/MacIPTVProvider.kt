@@ -639,7 +639,7 @@ class MacIPTVProvider : MainAPI() {
                     b_new = b.take(6)
                     newgroupMedia = true
                     for (nameMedia in groupMedia) {
-                        if (nameMedia.contains(b_new)) {
+                        if (nameMedia.contains(b_new) && (media.tv_genre_id == idGenre)) {
                             newgroupMedia = false
                             break
                         }
