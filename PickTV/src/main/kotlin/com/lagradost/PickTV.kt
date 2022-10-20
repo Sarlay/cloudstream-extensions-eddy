@@ -16,8 +16,7 @@ class PickTV : MainAPI() {
     override val supportedTypes =
         setOf(TvType.Live) // live
     val takeN = 10
-
-
+    
     /**
     Cherche le site pour un titre spécifique
 
@@ -167,6 +166,7 @@ class PickTV : MainAPI() {
                 link = data
             }
         }
+
         val live = link.replace("http://", "").replace("https://", "").take(8) + " \uD83D\uDD34"
         callback.invoke(
             ExtractorLink(
