@@ -9,6 +9,8 @@ import kotlin.collections.ArrayList
 
 class PickTV : MainAPI() {
     override var mainUrl = "http"
+    val urlmain =
+        "https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/trickylist.json"
     override var name = "MyPickTV"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
@@ -37,6 +39,13 @@ class PickTV : MainAPI() {
         }
     }
 
+    private fun List<SearchResponse>.sortBynameNumber(): List<SearchResponse> {
+        val regxNbr = Regex("""(\s\d{1,}${'$'}|\s\d{1,}\s)""")
+        return this.sortedBy {val str =it.name
+            regxNbr.find(str)?.groupValues?.get(0)?.trim()?.toInt()?:-10
+        }
+    }
+
     /**
     Cherche le site pour un titre spécifique
 
@@ -46,6 +55,8 @@ class PickTV : MainAPI() {
     private val resultsSearchNbr = 50
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResutls = ArrayList<SearchResponse>()
+        val reponse = app.get(urlmain).text
+        val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
         arraymediaPlaylist.sortByname(query).take(resultsSearchNbr).forEach { media ->
             searchResutls.add(
                 LiveSearchResponse(
@@ -66,14 +77,16 @@ class PickTV : MainAPI() {
      * charge la page d'informations, il ya toutes les donées, les épisodes, le résumé etc ...
      * Il faut retourner soit: AnimeLoadResponse, MovieLoadResponse, TorrentLoadResponse, TvSeriesLoadResponse.
      */
-    val allresultshome: MutableList<SearchResponse> = mutableListOf()
     override suspend fun load(url: String): LoadResponse {
+        val allresultshome = arrayListOf<SearchResponse>()
+
         var link = ""
         var title = ""
         var posterUrl = ""
 
         var flag = ""
-        allresultshome.clear()
+        val reponse = app.get(urlmain).text
+        val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
         for (media in arraymediaPlaylist) {
             if (url == media.url) {
                 link = media.url
@@ -119,12 +132,13 @@ class PickTV : MainAPI() {
                         )
                         allresultshome.add(
                             LiveSearchResponse(
-                                name = "${getFlag(channel.lang.toString())} ${cleanTitleKeepNumber(channelname)} $nameURLserver",
+                                name = "${cleanTitleKeepNumber(channelname)} $nameURLserver",
                                 url = streamurl,
                                 name,
                                 TvType.Live,
                                 posterUrl = posterurl,
-                                quality=quality,
+                                quality = quality,
+                                lang = channel.lang,
                             )
                         )
 
@@ -138,7 +152,7 @@ class PickTV : MainAPI() {
             "\uD83D\uDCF6" + link.replace("http://", "").replace("https://", "").take(8)
 
         if (allresultshome.size >= 2) {
-            val recommendation = allresultshome
+            val recommendation = allresultshome.sortBynameNumber()
             return LiveStreamLoadResponse(
                 name = "$title $flag $nameURLserver",
                 url = link,
@@ -204,9 +218,6 @@ class PickTV : MainAPI() {
         )
         return true
     }
-
-
-    private val arraymediaPlaylist = ArrayList<mediaData>()
 
     data class mediaData(
         @JsonProperty("title") var title: String,
@@ -274,22 +285,19 @@ class PickTV : MainAPI() {
         return genreIcon
     }
 
-    val arrayHomepage = arrayListOf<HomePageList>()
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val arrayHomepage = arrayListOf<HomePageList>()
+
         if (page == 1) {
-            val url =
-                "https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/trickylist.json"
-            var targetMedia: mediaData
-            val reponse = app.get(url).text
+            val reponse = app.get(urlmain).text
             val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
             val genreMedia = ArrayList<String>()
             var newGenre: String
             var category: String
             var newgenreMedia: Boolean
             ///////////////////////
-            arraymediaPlaylist!!.forEach { media ->
-                this.arraymediaPlaylist.add(media)
-                newGenre = cleanTitle(media.genre.toString())//
+            arraymediaPlaylist!!.forEach { mediaGroup ->
+                newGenre = cleanTitle(mediaGroup.genre.toString())//
 
                 newgenreMedia = true
                 for (nameGenre in genreMedia) {
@@ -321,19 +329,17 @@ class PickTV : MainAPI() {
                         mediaGenre = cleanTitle(media.genre.toString())
                         if (newgroupMedia && (mediaGenre == category)
                         ) {
-                            targetMedia = media
 
                             groupMedia.add(b_new)
-                            val groupName = "${cleanTitle(targetMedia.title)}"
-                            if (groupName == "NBA TV") {
-                                println("")
-                            }
+                            val groupName = "${cleanTitle(media.title)}"
+
                             LiveSearchResponse(
                                 groupName,
-                                targetMedia.url,
-                                targetMedia.title,
+                                media.url,
+                                media.title,
                                 TvType.Live,
-                                targetMedia.url_image,
+                                media.url_image,
+                                lang = media.lang?.lowercase(),
                             )
                         } else {
                             null
@@ -356,12 +362,13 @@ class PickTV : MainAPI() {
     }
 
     private fun cleanTitle(title: String): String {
-        return title.uppercase().replace("""\s\d{1,10}""".toRegex(), "").replace("""FHD""", "")
+        return title.uppercase().replace("""(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(), "").replace("""FHD""", "")
             .replace("""VIP""", "")
             .replace("""UHD""", "").replace("""HEVC""", "")
             .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
             .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
     }
+
     private fun cleanTitleKeepNumber(title: String): String {
         return title.uppercase().replace("""FHD""", "")
             .replace("""VIP""", "")
