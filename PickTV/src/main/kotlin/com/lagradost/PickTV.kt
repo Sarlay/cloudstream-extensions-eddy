@@ -2,9 +2,12 @@ package com.lagradost
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.animeproviders.NekosamaProvider
 import com.lagradost.cloudstream3.utils.*
+
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
+
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import java.util.*
 import kotlin.collections.ArrayList
@@ -222,6 +225,7 @@ class PickTV : MainAPI() {
     private fun getGenreIcone(sequence: String): String {
         val SPORT = findCountryId("SPORT")
         val INFO = findCountryId("INFO")
+        val GENERAL = findCountryId("GENERAL")
         val MUSIQUE = findCountryId("MUSIQUE")
         val CINEMA = findCountryId("CINEMA")
         val SERIES = findCountryId("SERIES")
@@ -245,6 +249,7 @@ class PickTV : MainAPI() {
             sequence.uppercase()
                 .contains(JEUNESSE) -> "\uD83D\uDC67\uD83D\uDC75\uD83D\uDE1B"
             sequence.uppercase().contains(DOCUMENTAIRE) -> "\uD83E\uDD96"
+            sequence.uppercase().contains(GENERAL) -> "\uD83E\uDDD0 \uD83D\uDCFA"
             else -> ""
         }
         return genreIcon
@@ -329,10 +334,11 @@ class PickTV : MainAPI() {
     }
 
     private fun cleanTitle(title: String): String {
-        return title.uppercase().replace("""\s\d""".toRegex(), "").replace("""FHD""", "")
+        return title.uppercase().replace("""\s\d{1,10}""".toRegex(), "").replace("""FHD""", "")
             .replace("""VIP""", "")
             .replace("""UHD""", "").replace("""HEVC""", "")
             .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
-            .replace("""HD""", "").trim()
+            .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
     }
 }
+
