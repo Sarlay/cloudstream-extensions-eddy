@@ -93,6 +93,14 @@ class MacIPTVProvider : MainAPI() {
         }
     }
 
+    private fun List<SearchResponse>.sortBynameNumber(): List<SearchResponse> {
+        val regxNbr = Regex("""(\s\d{1,}${'$'}|\s\d{1,}\s)""")
+        return this.sortedBy {
+            val str = it.name
+            regxNbr.find(str)?.groupValues?.get(0)?.trim()?.toInt() ?: -10
+        }
+    }
+
     /**
     Cherche le site pour un titre spécifique
 
@@ -198,13 +206,38 @@ class MacIPTVProvider : MainAPI() {
                         val streamurl = channel.url
                         val channelname = channel.title
                         val posterurl = channel.url_image.toString()
+                        val uppername = channelname.uppercase()
+                        val quality = getQualityFromString(
+                            when (!channelname.isNullOrBlank()) {
+                                uppername.contains(findCountryId("UHD")) -> {
+                                    "UHD"
+                                }
+                                uppername.contains(findCountryId("HD")) -> {
+                                    "HD"
+                                }
+                                uppername.contains(findCountryId("SD")) -> {
+                                    "SD"
+                                }
+                                uppername.contains(findCountryId("FHD")) -> {
+                                    "HDR"
+                                }
+                                uppername.contains(findCountryId("4K")) -> {
+                                    "FourK"
+                                }
+
+                                else -> {
+                                    null
+                                }
+                            }
+                        )
                         allresultshome.add(
                             LiveSearchResponse(
-                                name = channelname,
+                                name = cleanTitleKeepNumber(channelname),
                                 url = streamurl,
                                 name,
                                 TvType.Live,
                                 posterUrl = posterurl,
+                                quality = quality,
                             )
                         )
 
@@ -218,7 +251,7 @@ class MacIPTVProvider : MainAPI() {
         }
 
         if (allresultshome.size >= 2) {
-            val recommendation = allresultshome
+            val recommendation = allresultshome.sortBynameNumber()
             return LiveStreamLoadResponse(
                 name = title,
                 url = link,
@@ -494,7 +527,8 @@ class MacIPTVProvider : MainAPI() {
     }
 
     private fun cleanTitle(title: String): String {
-        return title.uppercase().replace("""\s\d""".toRegex(), "").replace("""FHD""", "")
+        return title.uppercase().replace("""(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(), "")
+            .replace("""FHD""", "")
             .replace("""VIP""", "")
             .replace("""UHD""", "").replace(rgxcodeCountry, "").replace("""HEVC""", "")
             .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
@@ -651,5 +685,13 @@ class MacIPTVProvider : MainAPI() {
         return HomePageResponse(
             arrayHomepage
         )
+    }
+
+    private fun cleanTitleKeepNumber(title: String): String {
+        return title.uppercase().replace("""FHD""", "")
+            .replace("""VIP""", "")
+            .replace("""UHD""", "").replace("""HEVC""", "")
+            .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
+            .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
     }
 }
