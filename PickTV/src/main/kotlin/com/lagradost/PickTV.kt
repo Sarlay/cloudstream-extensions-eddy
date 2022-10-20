@@ -16,7 +16,7 @@ class PickTV : MainAPI() {
     override val supportedTypes =
         setOf(TvType.Live) // live
     val takeN = 10
-    
+
     /**
     Cherche le site pour un titre spécifique
 
@@ -93,14 +93,38 @@ class PickTV : MainAPI() {
                         val posterurl = channel.url_image.toString()
                         val nameURLserver = "\uD83D\uDCF6" + streamurl.replace("http://", "")
                             .replace("https://", "").take(8)
+                        val uppername = channelname.uppercase()
+                        val quality = getQualityFromString(
+                            when (!channelname.isNullOrBlank()) {
+                                uppername.contains(findCountryId("UHD")) -> {
+                                    "UHD"
+                                }
+                                uppername.contains(findCountryId("HD")) -> {
+                                    "HD"
+                                }
+                                uppername.contains(findCountryId("SD")) -> {
+                                    "SD"
+                                }
+                                uppername.contains(findCountryId("FHD")) -> {
+                                    "HDR"
+                                }
+                                uppername.contains(findCountryId("4K")) -> {
+                                    "FourK"
+                                }
 
+                                else -> {
+                                    null
+                                }
+                            }
+                        )
                         allresultshome.add(
                             LiveSearchResponse(
-                                name = "${getFlag(channel.lang.toString())} $channelname $nameURLserver",
+                                name = "${getFlag(channel.lang.toString())} ${cleanTitleKeepNumber(channelname)} $nameURLserver",
                                 url = streamurl,
                                 name,
                                 TvType.Live,
                                 posterUrl = posterurl,
+                                quality=quality,
                             )
                         )
 
@@ -298,9 +322,12 @@ class PickTV : MainAPI() {
                         if (newgroupMedia && (mediaGenre == category)
                         ) {
                             targetMedia = media
+
                             groupMedia.add(b_new)
                             val groupName = "${cleanTitle(targetMedia.title)}"
-
+                            if (groupName == "NBA TV") {
+                                println("")
+                            }
                             LiveSearchResponse(
                                 groupName,
                                 targetMedia.url,
@@ -330,6 +357,13 @@ class PickTV : MainAPI() {
 
     private fun cleanTitle(title: String): String {
         return title.uppercase().replace("""\s\d{1,10}""".toRegex(), "").replace("""FHD""", "")
+            .replace("""VIP""", "")
+            .replace("""UHD""", "").replace("""HEVC""", "")
+            .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
+            .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
+    }
+    private fun cleanTitleKeepNumber(title: String): String {
+        return title.uppercase().replace("""FHD""", "")
             .replace("""VIP""", "")
             .replace("""UHD""", "").replace("""HEVC""", "")
             .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
