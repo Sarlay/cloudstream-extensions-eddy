@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import kotlinx.coroutines.runBlocking
 import me.xdrop.fuzzywuzzy.FuzzySearch
+import okhttp3.Interceptor
 import kotlin.collections.ArrayList
 
 class PickTV : MainAPI() {
@@ -41,8 +43,9 @@ class PickTV : MainAPI() {
 
     private fun List<SearchResponse>.sortBynameNumber(): List<SearchResponse> {
         val regxNbr = Regex("""(\s\d{1,}${'$'}|\s\d{1,}\s)""")
-        return this.sortedBy {val str =it.name
-            regxNbr.find(str)?.groupValues?.get(0)?.trim()?.toInt()?:-10
+        return this.sortedBy {
+            val str = it.name
+            regxNbr.find(str)?.groupValues?.get(0)?.trim()?.toInt() ?: -10
         }
     }
 
@@ -119,7 +122,7 @@ class PickTV : MainAPI() {
                                     "SD"
                                 }
                                 uppername.contains(findCountryId("FHD")) -> {
-                                    "HDR"
+                                    "HD"
                                 }
                                 uppername.contains(findCountryId("4K")) -> {
                                     "FourK"
@@ -172,6 +175,53 @@ class PickTV : MainAPI() {
         }
     }
 
+    var originloadlink: String = ""
+
+    /**
+     * Some providers ask for new token so we intercept the request to change the token
+     * */
+    override fun getVideoInterceptor(extractorLink: ExtractorLink): Interceptor {
+        val isredirectedOrTokenNeeded = originloadlink.contains("dreamsat.ddns")
+        // Needs to be object instead of lambda to make it compile correctly
+        return object : Interceptor {
+            override fun intercept(chain: Interceptor.Chain): okhttp3.Response {
+                if (isredirectedOrTokenNeeded) {
+                    var link: String = originloadlink
+                    runBlocking {
+                        when (true) {
+                            originloadlink.contains("dreamsat.ddns") -> {
+                                val headers1 = mapOf(
+                                    "User-Agent" to "REDLINECLIENT_DREAMSAT_650HD_PRO_RICHTV_V02",
+                                    "Accept-Encoding" to "identity",
+                                    "Connection" to "Keep-Alive",
+                                )
+                                val headerlocation = app.get(
+                                    originloadlink, headers = headers1,
+                                    allowRedirects = false
+                                ).headers
+                                val redirectlink = headerlocation.get("location")
+                                    .toString()
+
+                                if (redirectlink != "null") {
+                                    link = redirectlink
+                                }
+                            }
+                            else -> {
+                                link = originloadlink
+                            }
+                        }
+                    }
+                    val newRequest = chain.request()
+                        .newBuilder().url(link).build()
+                    return chain.proceed(newRequest)
+                } else {
+                    return chain.proceed(chain.request())
+                }
+            }
+        }
+    }
+
+    val rgxGetUrlRef = Regex("""(http[s:\/\/]*[^\/]*)""")
 
     /** récupere les liens .mp4 ou m3u8 directement à partir du paramètre data généré avec la fonction load()**/
     override suspend fun loadLinks(
@@ -180,6 +230,7 @@ class PickTV : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
+        originloadlink = data
         var isM3u = false
         var link: String = data
         when (true) {
@@ -206,12 +257,13 @@ class PickTV : MainAPI() {
         }
 
         val live = link.replace("http://", "").replace("https://", "").take(8) + " \uD83D\uDD34"
+
         callback.invoke(
             ExtractorLink(
                 name,
                 live,
                 link,
-                "",
+                "${rgxGetUrlRef.find(link)?.groupValues?.get(0).toString()}/",
                 Qualities.Unknown.value,
                 isM3u8 = isM3u,
             )
@@ -296,8 +348,8 @@ class PickTV : MainAPI() {
             var category: String
             var newgenreMedia: Boolean
             ///////////////////////
-            arraymediaPlaylist!!.forEach { mediaGroup ->
-                newGenre = cleanTitle(mediaGroup.genre.toString())//
+            arraymediaPlaylist!!.forEach { mediaGenre ->
+                newGenre = cleanTitle(mediaGenre.genre.toString())//
 
                 newgenreMedia = true
                 for (nameGenre in genreMedia) {
@@ -336,7 +388,7 @@ class PickTV : MainAPI() {
                             LiveSearchResponse(
                                 groupName,
                                 media.url,
-                                media.title,
+                                name,
                                 TvType.Live,
                                 posterUrl,
                             )
@@ -361,7 +413,8 @@ class PickTV : MainAPI() {
     }
 
     private fun cleanTitle(title: String): String {
-        return title.uppercase().replace("""(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(), "").replace("""FHD""", "")
+        return title.uppercase().replace("""(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(), "")
+            .replace("""FHD""", "")
             .replace("""VIP""", "")
             .replace("""UHD""", "").replace("""HEVC""", "")
             .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
