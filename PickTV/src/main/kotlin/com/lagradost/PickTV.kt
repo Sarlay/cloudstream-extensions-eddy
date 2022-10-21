@@ -19,7 +19,7 @@ class PickTV : MainAPI() {
     override var lang = "fr" // fournisseur est en francais
     override val supportedTypes =
         setOf(TvType.Live) // live
-    val takeN = 10
+    //val takeN = 10
 
     /**
     Cherche le site pour un titre spécifique
@@ -60,11 +60,18 @@ class PickTV : MainAPI() {
         val searchResutls = ArrayList<SearchResponse>()
         val reponse = app.get(urlmain).text
         val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
+        var poster: String?
         arraymediaPlaylist.sortByname(query).take(resultsSearchNbr).forEach { media ->
+            poster =
+                if (media.url_groupPoster?.isBlank() == false && media.url_image?.isBlank() == true) {
+                    media.url_groupPoster
+                } else {
+                    media.url_image
+                }
             searchResutls.add(
                 LiveSearchResponse(
                     "${getFlag(media.lang.toString())} ${media.title}",
-                    media.url_load.toString(),
+                    poster.toString(),
                     media.title,
                     TvType.Live,
                     media.url_image,
@@ -86,27 +93,32 @@ class PickTV : MainAPI() {
         var link = ""
         var title = ""
         var posterUrl = ""
-
+        var posterurlRec: String?
         var flag = ""
         val reponse = app.get(urlmain).text
         val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
         for (media in arraymediaPlaylist) {
             if (url == media.url) {
                 link = media.url
+                originloadlink = link
                 title = media.title
                 flag = getFlag(media.lang.toString())
-                val a = cleanTitle(title)
-                posterUrl = media.url_image.toString()
+                val a = rgxSelectFirstWord.find(cleanTitle(title))!!.groupValues[0]
+                posterUrl =
+                    if (media?.url_groupPoster?.isBlank() == false && media.url_image?.isBlank() == true) {
+                        media.url_groupPoster
+                    } else {
+                        media.url_image
+                    }.toString()
                 var b_new: String
                 arraymediaPlaylist.forEach { channel ->
                     val b = cleanTitle(channel.title)
-                    b_new = b.take(takeN)
-                    if (a.take(takeN)
-                            .contains(b_new) && media.genre == channel.genre && media.url != channel.url
+                    b_new = rgxSelectFirstWord.find(b)!!.groupValues[0]//b.take(takeN)
+                    if (a.contains(b_new) && media.genre == channel.genre && media.url != channel.url
                     ) {
                         val streamurl = channel.url
                         val channelname = channel.title
-                        val posterurl = channel.url_image.toString()
+
                         val nameURLserver = "\uD83D\uDCF6" + streamurl.replace("http://", "")
                             .replace("https://", "").take(8)
                         val uppername = channelname.uppercase()
@@ -133,13 +145,20 @@ class PickTV : MainAPI() {
                                 }
                             }
                         )
+
+                        posterurlRec =
+                            if (media?.url_groupPoster?.isBlank() == false && channel.url_image?.isBlank() == true) {
+                                media.url_groupPoster
+                            } else {
+                                channel.url_image
+                            }
                         allresultshome.add(
                             LiveSearchResponse(
                                 name = "${cleanTitleKeepNumber(channelname)} $nameURLserver",
                                 url = streamurl,
                                 name,
                                 TvType.Live,
-                                posterUrl = posterurl,
+                                posterUrl = posterurlRec,
                                 quality = quality,
                                 lang = channel.lang,
                             )
@@ -277,7 +296,7 @@ class PickTV : MainAPI() {
         @JsonProperty("genre") val genre: String?,
         @JsonProperty("url_image") val url_image: String?,
         @JsonProperty("lang") val lang: String?,
-        @JsonProperty("url_load") var url_load: String?,
+        @JsonProperty("url_groupPoster") var url_groupPoster: String?,
     )
 
     private fun findCountryId(codeCountry: String): Regex {
@@ -310,7 +329,7 @@ class PickTV : MainAPI() {
         val GENERAL = findCountryId("GENERAL")
         val MUSIQUE = findCountryId("MUSIQUE")
         val CINEMA = findCountryId("CINEMA")
-        val SERIES = findCountryId("SERIES")
+        val SERIES = findCountryId("SERIE")
         val DIVERTISSEMENT = findCountryId("DIVERTISSEMENT")
         val JEUNESSE = findCountryId("JEUNESSE")
         val DOCUMENTAIRE = findCountryId("DOCUMENTAIRE")
@@ -337,6 +356,7 @@ class PickTV : MainAPI() {
         return genreIcon
     }
 
+    val rgxSelectFirstWord = Regex("""(^[^\s]*)""")
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
 
@@ -347,6 +367,7 @@ class PickTV : MainAPI() {
             var newGenre: String
             var category: String
             var newgenreMedia: Boolean
+            var posterUrl: String?
             ///////////////////////
             arraymediaPlaylist!!.forEach { mediaGenre ->
                 newGenre = cleanTitle(mediaGenre.genre.toString())//
@@ -369,7 +390,7 @@ class PickTV : MainAPI() {
                     val home = arraymediaPlaylist!!.mapNotNull { media ->
 
                         val b = cleanTitle(media.title)//
-                        b_new = b.take(takeN)
+                        b_new = rgxSelectFirstWord.find(b)!!.groupValues[0]  //b.take(takeN)
                         newgroupMedia = true
                         mediaGenre = cleanTitle(media.genre.toString())
                         for (nameMedia in groupMedia) {
@@ -382,9 +403,14 @@ class PickTV : MainAPI() {
                         ) {
 
                             groupMedia.add(b_new)
-                            val groupName = "${cleanTitle(media.title)}"
-                            val posterUrl = media.url_image
+                            val groupName = b_new//"${cleanTitle(media.title)}"
 
+                            posterUrl =
+                                if (media.url_groupPoster?.isBlank() == true && media.url_image?.isBlank() == false) {
+                                    media.url_image
+                                } else {
+                                    media.url_groupPoster
+                                }
                             LiveSearchResponse(
                                 groupName,
                                 media.url,
