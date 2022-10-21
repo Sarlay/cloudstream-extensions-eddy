@@ -114,7 +114,7 @@ class PickTV : MainAPI() {
                 arraymediaPlaylist.forEach { channel ->
                     val b = cleanTitle(channel.title)
                     b_new = rgxSelectFirstWord.find(b)!!.groupValues[0]//b.take(takeN)
-                    if (a.contains(b_new) && media.genre == channel.genre && media.url != channel.url
+                    if (a == b_new && media.genre == channel.genre && media.url != channel.url
                     ) {
                         val streamurl = channel.url
                         val channelname = channel.title
@@ -394,7 +394,7 @@ class PickTV : MainAPI() {
                         newgroupMedia = true
                         mediaGenre = cleanTitle(media.genre.toString())
                         for (nameMedia in groupMedia) {
-                            if (nameMedia.contains(b_new) && (mediaGenre == category)) {
+                            if (nameMedia == b_new && (mediaGenre == category)) {
                                 newgroupMedia = false
                                 break
                             }
