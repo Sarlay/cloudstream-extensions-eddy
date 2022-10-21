@@ -71,10 +71,10 @@ class PickTV : MainAPI() {
             searchResutls.add(
                 LiveSearchResponse(
                     "${getFlag(media.lang.toString())} ${media.title}",
-                    poster.toString(),
+                    media.url,
                     media.title,
                     TvType.Live,
-                    media.url_image,
+                    poster.toString(),
                 )
             )
         }
