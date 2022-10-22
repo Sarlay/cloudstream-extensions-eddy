@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.*
 import okhttp3.Interceptor
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.nicehttp.NiceResponse
 import kotlinx.coroutines.runBlocking
 import me.xdrop.fuzzywuzzy.FuzzySearch
 
@@ -573,27 +574,47 @@ class MacIPTVProvider : MainAPI() {
 
         if (!init) {
             val header = getAuthHeader()
-
-            ///////////// GET EXPIRATION
             val url_info =
                 "$mainUrl/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml"
-            val reponseGetInfo = app.get(url_info, headers = header)
-            val infoExpirationJson = reponseGetInfo.parsed<GetExpiration>()
-            val expiration = infoExpirationJson.js?.phone
-            ////////////////////////// GET ALL GENRES
-            val url =
+            val urlGetGenre =
                 "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"
-            val responseGetgenre = app.get(url, headers = header)
-            val responseGetGenretoJSON = responseGetgenre.parsed<JsonGetGenre>()
-            ////////////////////////// GET ALL CHANNELS
             val urlGetallchannels =
                 "$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
-            val responseAllchannels = app.get(urlGetallchannels, headers = header)
 
-            val responseAllchannelstoJSON = responseAllchannels.parsed<Root>()
+            var reponseGetInfo: NiceResponse? = null
+            var responseGetgenre: NiceResponse? = null
+            var responseAllchannels: NiceResponse? = null
+            listOf(
+                url_info,
+                urlGetGenre,
+                urlGetallchannels
+            ).apmap { url ->
+                val response = app.get(url, headers = header)
+                when (true) {
+                    url.contains("action=get_main_info") -> {
+                        reponseGetInfo = response
+                    }
+                    url.contains("action=get_genre") -> {
+                        responseGetgenre = response
+                    }
+                    url.contains("action=get_all_channels") -> {
+                        responseAllchannels = response
+                    }
+                    else -> {
+                        ""
+                    }
+                }
+            }
+            ///////////// GET EXPIRATION
+            val infoExpirationJson = reponseGetInfo!!.parsed<GetExpiration>()
+            val expiration = infoExpirationJson.js?.phone
+            ////////////////////////// GET ALL GENRES
+            val responseGetGenretoJSON = responseGetgenre!!.parsed<JsonGetGenre>()
+            ////////////////////////// GET ALL CHANNELS
+            val responseAllchannelstoJSON = responseAllchannels!!.parsed<Root>()
             val AllchannelstoJSON = responseAllchannelstoJSON.js!!.data.sortByTitleNumber()
             var firstCat = true
-            responseGetGenretoJSON.js.apmap { js ->
+            responseGetGenretoJSON.js.forEach { js ->
                 val idGenre = js.id
                 val categoryTitle = js.title.toString()
 
@@ -682,7 +703,9 @@ class MacIPTVProvider : MainAPI() {
                 }
 
             }
+
         }
+
         return HomePageResponse(
             arrayHomepage
         )
