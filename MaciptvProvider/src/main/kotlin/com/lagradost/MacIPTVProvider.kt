@@ -593,7 +593,7 @@ class MacIPTVProvider : MainAPI() {
             val responseAllchannelstoJSON = responseAllchannels.parsed<Root>()
             val AllchannelstoJSON = responseAllchannelstoJSON.js!!.data.sortByTitleNumber()
             var firstCat = true
-            responseGetGenretoJSON.js.forEach { js ->
+            responseGetGenretoJSON.js.apmap { js ->
                 val idGenre = js.id
                 val categoryTitle = js.title.toString()
 
