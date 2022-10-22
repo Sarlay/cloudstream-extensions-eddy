@@ -96,7 +96,7 @@ class PickTV : MainAPI() {
         var posterurlRec: String?
         var flag = ""
         val reponse = app.get(urlmain).text
-        val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
+        var arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
         for (media in arraymediaPlaylist) {
             if (url == media.url) {
                 link = media.url
@@ -356,20 +356,29 @@ class PickTV : MainAPI() {
         return genreIcon
     }
 
+    private fun ArrayList<mediaData>.sortByTitleNumber(): ArrayList<mediaData> {
+        val regxNbr = Regex("""(\s\d{1,}${'$'}|\s\d{1,}\s)""")
+        return ArrayList(this.sortedBy {
+            val str = it.title
+            regxNbr.find(str)?.groupValues?.get(0)?.trim()?.toInt() ?: 1000
+        })
+    }
+
     val rgxSelectFirstWord = Regex("""(^[^\s]*)""")
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
 
         if (page == 1) {
             val reponse = app.get(urlmain).text
-            val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
+            var arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
             val genreMedia = ArrayList<String>()
             var newGenre: String
             var category: String
             var newgenreMedia: Boolean
             var posterUrl: String?
             ///////////////////////
-            arraymediaPlaylist!!.forEach { mediaGenre ->
+            val sortedarraymediaPlaylist = arraymediaPlaylist.sortByTitleNumber()
+            arraymediaPlaylist.forEach { mediaGenre ->
                 newGenre = cleanTitle(mediaGenre.genre.toString())//
 
                 newgenreMedia = true
@@ -387,7 +396,7 @@ class PickTV : MainAPI() {
                     var b_new: String
                     var newgroupMedia: Boolean
                     var mediaGenre: String
-                    val home = arraymediaPlaylist!!.mapNotNull { media ->
+                    val home = sortedarraymediaPlaylist.mapNotNull { media ->
 
                         val b = cleanTitle(media.title)//
                         b_new = rgxSelectFirstWord.find(b)!!.groupValues[0]  //b.take(takeN)
