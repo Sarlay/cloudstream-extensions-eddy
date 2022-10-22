@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="nginx_info_title">What is Nginx ?</string>
-    <string name="nginx_info_summary">Nginx is a software that can be used to display files from a server that you own. Click to see a Nginx setup guide</string>
+    <string name="nginx_info_title">What is Maciptv ?</string>
+    <string name="nginx_info_summary">Maciptv is an extension that will allow you to enjoy your IPTV accounts. Give the provider's portal url http\:\/\/exemple.com\/c\/ and your mac 00:1A:79:XX:XX as password123. To select/revert to the default account, create an account with 'none' instead of '127.0.0.1' and no need to fill in the other info</string>
 </resources>

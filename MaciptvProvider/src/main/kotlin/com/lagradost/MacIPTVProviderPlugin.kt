@@ -17,7 +17,9 @@ class MacIPTVProviderPlugin : Plugin() {
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         iptvboxApi.init()
-        registerMainAPI(MacIPTVProvider())
+        registerMainAPI(MacIPTVProvider("fr"))
+		registerMainAPI(MacIPTVProvider("en"))
+		registerMainAPI(MacIPTVProvider("ar"))
         ioSafe {
             iptvboxApi.initialize()
         }

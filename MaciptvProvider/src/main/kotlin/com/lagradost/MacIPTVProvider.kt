@@ -1,25 +1,17 @@
 package com.lagradost
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.cloudstream3.*
-import okhttp3.Interceptor
-import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.nicehttp.NiceResponse
-import kotlinx.coroutines.runBlocking
-import me.xdrop.fuzzywuzzy.FuzzySearch
+rop.fuzzywuzzy.FuzzySearch
 
 
-class MacIPTVProvider : MainAPI() {
+class MacIPTVProvider(override var lang: String) : MainAPI() {
     private val defaulmac_adresse =
-        "mac=00:1a:79:a7:9e:ed"
+        "mac=00:1a:79:ae:2a:30"
     private val defaultmainUrl =
-        "http://matrix-ott.tv:8080"
-    var defaultname = "BoxIPTV-MatrixOTT"
-    override var name = "Box Iptv"
+        "http://ultra-box.club/c/"
+    var defaultname = "BoxIPTV-MatrixOTT |${lang.uppercase()}|"
+    override var name = "Box Iptv |${lang.uppercase()}|"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
-    override var lang = "fr" // fournisseur est en francais
     override val supportedTypes =
         setOf(TvType.Live) // live
 
@@ -33,6 +25,7 @@ class MacIPTVProvider : MainAPI() {
     }
 
     private suspend fun getAuthHeader(): Map<String, String> {
+
         mainUrl = overrideUrl.toString()
         val main = mainUrl.uppercase().trim()
         val localCredentials = loginMac
@@ -60,7 +53,7 @@ class MacIPTVProvider : MainAPI() {
                 "Authorization" to "Bearer $key",
             )
         }
-        name = companionName ?: name
+        name = (companionName ?: name) + " |${lang.uppercase()}|"
         if (!init) {
             val url_key = "$mainUrl/portal.php?type=stb&action=handshake&JsHttpRequest=1-xml"
             val reponseGetkey = app.get(
@@ -94,13 +87,6 @@ class MacIPTVProvider : MainAPI() {
         }
     }
 
-    private fun List<SearchResponse>.sortBynameNumber(): List<SearchResponse> {
-        val regxNbr = Regex("""(\s\d{1,}${'$'}|\s\d{1,}\s)""")
-        return this.sortedBy {
-            val str = it.name
-            regxNbr.find(str)?.groupValues?.get(0)?.trim()?.toInt() ?: -10
-        }
-    }
 
     /**
     Cherche le site pour un titre spécifique
@@ -164,7 +150,7 @@ class MacIPTVProvider : MainAPI() {
             val descr = epg_i.descr
             val t_time = epg_i.tTime
             val t_time_to = epg_i.tTimeTo
-            val new_descr = "De $t_time à $t_time_to - $name : $descr"
+            val new_descr = "||($t_time -> $t_time_to)  $name : $descr"
             if (!description.contains(new_descr)) {
                 description = "$description\n $new_descr"
             }
@@ -210,19 +196,19 @@ class MacIPTVProvider : MainAPI() {
                         val uppername = channelname.uppercase()
                         val quality = getQualityFromString(
                             when (!channelname.isNullOrBlank()) {
-                                uppername.contains(findCountryId("UHD")) -> {
+                                uppername.contains(findKeyWord("UHD")) -> {
                                     "UHD"
                                 }
-                                uppername.contains(findCountryId("HD")) -> {
+                                uppername.contains(findKeyWord("HD")) -> {
                                     "HD"
                                 }
-                                uppername.contains(findCountryId("SD")) -> {
+                                uppername.contains(findKeyWord("SD")) -> {
                                     "SD"
                                 }
-                                uppername.contains(findCountryId("FHD")) -> {
-                                    "HDR"
+                                uppername.contains(findKeyWord("FHD")) -> {
+                                    "HD"
                                 }
-                                uppername.contains(findCountryId("4K")) -> {
+                                uppername.contains(findKeyWord("4K")) -> {
                                     "FourK"
                                 }
 
@@ -522,35 +508,66 @@ class MacIPTVProvider : MainAPI() {
 
     )
 
-    private val codeCountry = "FR"//|US|UK" // Try US UK BR
-    private fun findCountryId(codeCountry: String): Regex {
-        return """(?:^|\W+|\s)+($codeCountry)(?:\s|\W+|${'$'}|\|)+""".toRegex()
+    private var codeCountry = lang
+    private fun findKeyWord(str: String): Regex {
+        val upperSTR = str.uppercase()
+        val sequence = when (true) {
+            (upperSTR == "EN") -> {
+                "US|UK"
+            }
+            else -> upperSTR
+        }
+        return """(?:^|\W+|\s)+($sequence)(?:\s|\W+|${'$'}|\|)+""".toRegex()
+    }
+
+    private fun String.isContainsTargetCountry(): Boolean {
+        val getLang = lang.uppercase()
+        var resp = false
+        when (true) {
+            (getLang == "FR") -> {
+                arrayListOf("FRENCH", "FRANCE").forEach {
+                    if (this.uppercase().contains(findKeyWord(it))) {
+                        resp = true
+                    }
+                }
+            }
+            (getLang == "EN") -> {
+                arrayListOf("ENGLISH", "USA").forEach {
+                    if (this.uppercase().contains(findKeyWord(it))) {
+                        resp = true
+                    }
+                }
+            }
+            (getLang == "AR") -> {
+                arrayListOf("ARABIC", "ARAB", "ARABIA").forEach {
+                    if (this.uppercase().contains(findKeyWord(it))) {
+                        resp = true
+                    }
+                }
+            }
+            else -> resp = false
+        }
+
+
+
+        return resp
     }
 
     private fun cleanTitle(title: String): String {
         return title.uppercase().replace("""(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(), " ")
             .replace("""FHD""", "")
-            .replace("""VIP""", "")
+            .replace(findKeyWord("VIP"), "")
             .replace("""UHD""", "").replace(rgxcodeCountry, "").replace("""HEVC""", "")
             .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
             .replace("""HD""", "").replace(rgxcodeCountry, "").trim()
     }
 
-    private fun isSelectedCountry(sequence: String, listCountry: List<String>): Boolean {
-        var exist = false
-        listCountry.forEach { it ->
-            if (sequence.uppercase().contains(it)) {
-                exist = true
-            }
-        }
-        return exist
-    }
 
     private fun getFlag(sequence: String): String {
-        val FR = findCountryId("FR|FRANCE|FRENCH")
-        val US = findCountryId("US|USA")
-        val AR = findCountryId("AR|ARAB|ARABIC")
-        val UK = findCountryId("UK")
+        val FR = findKeyWord("FR|FRANCE|FRENCH")
+        val US = findKeyWord("US|USA")
+        val AR = findKeyWord("AR|ARAB|ARABIC|ARABIA")
+        val UK = findKeyWord("UK")
         val flag: String
         flag = when (true) {
             sequence.uppercase()
@@ -566,8 +583,8 @@ class MacIPTVProvider : MainAPI() {
         return flag
     }
 
-    val listCountryOrCat = arrayListOf("FRENCH", "FRANCE", "SPORT")
-    val rgxcodeCountry = findCountryId(codeCountry)
+
+    val rgxcodeCountry = findKeyWord(codeCountry)
     val arrayHomepage = arrayListOf<HomePageList>()
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
 
@@ -619,10 +636,9 @@ class MacIPTVProvider : MainAPI() {
                 val categoryTitle = js.title.toString()
 
                 if (idGenre!!.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
-                        .contains(rgxcodeCountry) || isSelectedCountry(
-                        categoryTitle,
-                        listCountryOrCat
-                    ))
+                        .contains(rgxcodeCountry) ||
+                            categoryTitle.isContainsTargetCountry()
+                            )
                 ) {
                     AllchannelstoJSON.forEach { data ->
                         val genre = data.tvGenreId
@@ -685,10 +701,7 @@ class MacIPTVProvider : MainAPI() {
                 }
                 val flag: String
                 if ((categoryTitle.uppercase()
-                        .contains(rgxcodeCountry) || isSelectedCountry(
-                        categoryTitle,
-                        listCountryOrCat
-                    ))
+                        .contains(rgxcodeCountry) || categoryTitle.isContainsTargetCountry())
                 ) {
 
 
@@ -713,10 +726,10 @@ class MacIPTVProvider : MainAPI() {
 
     private fun cleanTitleKeepNumber(title: String): String {
         return title.uppercase().replace("""FHD""", "")
-            .replace("""VIP""", "")
+            .replace(findKeyWord("VIP"), "")
             .replace("""UHD""", "").replace("""HEVC""", "")
             .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
-            .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
+            .replace("""HD""", "").replace(rgxcodeCountry, "").trim()
     }
 
     private fun ArrayList<Data>.sortByTitleNumber(): ArrayList<Data> {
