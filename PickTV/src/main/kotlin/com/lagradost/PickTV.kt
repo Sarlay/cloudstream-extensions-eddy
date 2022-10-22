@@ -173,7 +173,7 @@ class PickTV : MainAPI() {
         val nameURLserver =
             "\uD83D\uDCF6" + link.replace("http://", "").replace("https://", "").take(8)
 
-        if (allresultshome.size >= 2) {
+        if (allresultshome.size >= 1) {
             val recommendation = allresultshome.sortBynameNumber()
             return LiveStreamLoadResponse(
                 name = "$title $flag $nameURLserver",
@@ -448,7 +448,7 @@ class PickTV : MainAPI() {
     }
 
     private fun cleanTitle(title: String): String {
-        return title.uppercase().replace("""(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(), "")
+        return title.uppercase().replace("""(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(), " ")
             .replace("""FHD""", "")
             .replace("""VIP""", "")
             .replace("""UHD""", "").replace("""HEVC""", "")
@@ -464,3 +464,4 @@ class PickTV : MainAPI() {
             .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
     }
 }
+
