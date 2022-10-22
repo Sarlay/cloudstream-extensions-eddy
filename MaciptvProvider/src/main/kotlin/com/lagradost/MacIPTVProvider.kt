@@ -167,7 +167,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
     }
 
 
-
     override suspend fun load(url: String): LoadResponse {
 
         var link = ""
@@ -516,7 +515,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
     private fun findKeyWord(str: String): Regex {
         val upperSTR = str.uppercase()
         val sequence = when (true) {
-            (upperSTR == "EN") -> {
+            upperSTR == "EN" -> {
                 "US|UK"
             }
             else -> upperSTR
@@ -528,21 +527,21 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         val getLang = lang.uppercase()
         var resp = false
         when (true) {
-            (getLang == "FR") -> {
+            getLang == "FR" -> {
                 arrayListOf("FRENCH", "FRANCE").forEach {
                     if (this.uppercase().contains(findKeyWord(it))) {
                         resp = true
                     }
                 }
             }
-            (getLang == "EN") -> {
+            getLang == "EN" -> {
                 arrayListOf("ENGLISH", "USA").forEach {
                     if (this.uppercase().contains(findKeyWord(it))) {
                         resp = true
                     }
                 }
             }
-            (getLang == "AR") -> {
+            getLang == "AR" -> {
                 arrayListOf("ARABIC", "ARAB", "ARABIA").forEach {
                     if (this.uppercase().contains(findKeyWord(it))) {
                         resp = true
@@ -681,13 +680,13 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     b_new = b.take(6)
                     newgroupMedia = true
                     for (nameMedia in groupMedia) {
-                        if (nameMedia.contains(b_new) && (media.tv_genre_id == idGenre)) {
+                        if (nameMedia.contains(b_new) && media.tv_genre_id == idGenre) {
                             newgroupMedia = false
                             break
                         }
                     }
                     groupMedia.contains(b_new)
-                    if (page == 1 && (media.tv_genre_id == idGenre) && newgroupMedia
+                    if (page == 1 && media.tv_genre_id == idGenre && newgroupMedia
                     ) {
                         groupMedia.add(b_new)
                         val groupName = cleanTitle(media.title)
@@ -704,8 +703,8 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     }
                 }
                 val flag: String
-                if ((categoryTitle.uppercase()
-                        .contains(rgxcodeCountry) || categoryTitle.isContainsTargetCountry())
+                if (categoryTitle.uppercase()
+                        .contains(rgxcodeCountry) || categoryTitle.isContainsTargetCountry()
                 ) {
 
 
