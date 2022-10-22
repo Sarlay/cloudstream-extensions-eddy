@@ -251,7 +251,7 @@ class MacIPTVProvider : MainAPI() {
 
         }
 
-        if (allresultshome.size >= 2) {
+        if (allresultshome.size >= 1) {
             val recommendation = allresultshome//.sortBynameNumber()
             return LiveStreamLoadResponse(
                 name = title,
