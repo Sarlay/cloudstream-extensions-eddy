@@ -528,7 +528,7 @@ class MacIPTVProvider : MainAPI() {
     }
 
     private fun cleanTitle(title: String): String {
-        return title.uppercase().replace("""(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(), "")
+        return title.uppercase().replace("""(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(), " ")
             .replace("""FHD""", "")
             .replace("""VIP""", "")
             .replace("""UHD""", "").replace(rgxcodeCountry, "").replace("""HEVC""", "")
