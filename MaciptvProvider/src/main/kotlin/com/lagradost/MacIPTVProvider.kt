@@ -700,7 +700,7 @@ class MacIPTVProvider : MainAPI() {
         val regxNbr = Regex("""(\s\d{1,}${'$'}|\s\d{1,}\s)""")
         return ArrayList(this.sortedBy {
             val str = it.name.toString()
-            regxNbr.find(str)?.groupValues?.get(0)?.trim()?.toInt() ?: -10
+            regxNbr.find(str)?.groupValues?.get(0)?.trim()?.toInt() ?: 1000
         })
     }
 }
