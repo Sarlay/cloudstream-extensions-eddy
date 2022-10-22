@@ -1,6 +1,13 @@
 package com.lagradost
 
-rop.fuzzywuzzy.FuzzySearch
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.*
+import okhttp3.Interceptor
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.nicehttp.NiceResponse
+import kotlinx.coroutines.runBlocking
+import me.xdrop.fuzzywuzzy.FuzzySearch
 
 
 class MacIPTVProvider(override var lang: String) : MainAPI() {
