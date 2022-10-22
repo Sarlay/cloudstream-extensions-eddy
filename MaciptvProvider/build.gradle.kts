@@ -9,10 +9,9 @@ version = 1
 
 
 cloudstream {
-    language = "fr"
     // All of these properties are optional, you can safely remove them
 
-    description = "Ajoutez votre compte IPTV ou bien à défaut, le compte automatique vous permettra de vivre en Live vos émissions Tv des groupes Bein, RMC, Canal ..."
+    description = "Add your IPTV account or alternatively, the automatic account will allow you to watch live (Sport, movies, ...)."
     authors = listOf("Eddy")
 
     /**
