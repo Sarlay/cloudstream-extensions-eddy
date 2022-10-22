@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="nginx_info_summary">Maciptv est un emulateur qui va vous permettre de profiter de vos comptes IPTV. Donner l\'url portail du fournisseur http\:\/\/exemple.com\/c\/ et votre mac 00:1A:79:XX:XX:XX comme password123. Pour sélectionner/revenir au compte par défaut, créer un compte avec \'none\' à la place de \'127.0.0.1\' et pas besoin de renseigner les autres infos</string>
+    <string name="nginx_info_summary">Maciptv est un emulateur qui va vous permettre de profiter de vos comptes IPTV. Donner l\'url portail du fournisseur http:\/\/exemple.com\/c\/ et votre mac 00:1A:79:XX:XX:XX comme password123. Pour sélectionner/revenir au compte par défaut, créer un compte avec \'none\' à la place de \'127.0.0.1\' et pas besoin de renseigner les autres infos</string>
     <string name="nginx_url_pref">Addresse du serveur IPTV</string>
 </resources>
