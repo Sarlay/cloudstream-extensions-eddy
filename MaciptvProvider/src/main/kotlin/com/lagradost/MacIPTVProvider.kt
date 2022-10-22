@@ -251,7 +251,7 @@ class MacIPTVProvider : MainAPI() {
         }
 
         if (allresultshome.size >= 2) {
-            val recommendation = allresultshome.sortBynameNumber()
+            val recommendation = allresultshome//.sortBynameNumber()
             return LiveStreamLoadResponse(
                 name = title,
                 url = link,
@@ -591,6 +591,7 @@ class MacIPTVProvider : MainAPI() {
             val responseAllchannels = app.get(urlGetallchannels, headers = header)
 
             val responseAllchannelstoJSON = responseAllchannels.parsed<Root>()
+            val AllchannelstoJSON = responseAllchannelstoJSON.js!!.data.sortByTitleNumber()
             var firstCat = true
             responseGetGenretoJSON.js.forEach { js ->
                 val idGenre = js.id
@@ -602,7 +603,7 @@ class MacIPTVProvider : MainAPI() {
                         listCountryOrCat
                     ))
                 ) {
-                    responseAllchannelstoJSON.js!!.data.forEach { data ->
+                    AllchannelstoJSON.forEach { data ->
                         val genre = data.tvGenreId
 
                         if (genre != null) {
@@ -693,5 +694,13 @@ class MacIPTVProvider : MainAPI() {
             .replace("""UHD""", "").replace("""HEVC""", "")
             .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
             .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
+    }
+
+    private fun ArrayList<Data>.sortByTitleNumber(): ArrayList<Data> {
+        val regxNbr = Regex("""(\s\d{1,}${'$'}|\s\d{1,}\s)""")
+        return ArrayList(this.sortedBy {
+            val str = it.name.toString()
+            regxNbr.find(str)?.groupValues?.get(0)?.trim()?.toInt() ?: -10
+        })
     }
 }
