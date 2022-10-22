@@ -17,13 +17,13 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         "http://ultra-box.club/c/"
     var defaultname = "BoxIPTV-MatrixOTT |${lang.uppercase()}|"
     override var name = "Box Iptv |${lang.uppercase()}|"
-    override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
-    override val hasMainPage = true // page d'accueil (optionel mais encoragé)
+    override val hasQuickSearch = false
+    override val hasMainPage = true
     override val supportedTypes =
         setOf(TvType.Live) // live
 
     private var init = false
-    var key: String? = ""
+    private var key: String? = ""
 
     companion object {
         var companionName: String? = null
@@ -166,10 +166,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         return description
     }
 
-    /**
-     * Charge la page d'informations, il ya toutes les donées, les épisodes, le résumé etc ...
-     * Il faut retourner soit: AnimeLoadResponse, MovieLoadResponse, TorrentLoadResponse, TvSeriesLoadResponse.
-     */
+
 
     override suspend fun load(url: String): LoadResponse {
 
@@ -226,7 +223,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                         )
                         allresultshome.add(
                             LiveSearchResponse(
-                                name = cleanTitleKeepNumber(channelname),
+                                name = cleanTitleButKeepNumber(channelname),
                                 url = streamurl,
                                 name,
                                 TvType.Live,
@@ -245,7 +242,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         }
 
         if (allresultshome.size >= 1) {
-            val recommendation = allresultshome//.sortBynameNumber()
+            val recommendation = allresultshome
             return LiveStreamLoadResponse(
                 name = title,
                 url = link,
@@ -731,7 +728,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         )
     }
 
-    private fun cleanTitleKeepNumber(title: String): String {
+    private fun cleanTitleButKeepNumber(title: String): String {
         return title.uppercase().replace("""FHD""", "")
             .replace(findKeyWord("VIP"), "")
             .replace("""UHD""", "").replace("""HEVC""", "")
