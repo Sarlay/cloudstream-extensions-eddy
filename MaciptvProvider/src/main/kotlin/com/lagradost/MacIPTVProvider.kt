@@ -65,45 +65,39 @@ data class Channel(
     var id: String?,
     var tv_genre_id: String?,
     var ch_id: String?,
-)
-
-fun List<Channel>.toSearchResponseHomePage(
-    provider: MacIPTVProvider,
-    idGenre: String
-): List<SearchResponse> {
-    val groupMedia = ArrayList<String>()
-    var b_new: String
-    var newgroupMedia: Boolean
-    val rgxcodeCountry = provider.rgxcodeCountry
-    return this.mapNotNull { media ->
-        val b = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
-        b_new = b.take(6)
-        newgroupMedia = true
-        for (nameMedia in groupMedia) {
-            if (nameMedia.contains(b_new) && media.tv_genre_id == idGenre) {
-                newgroupMedia = false
-                break
-            }
-        }
-        groupMedia.contains(b_new)
-        if (media.tv_genre_id == idGenre && newgroupMedia
-        ) {
-            groupMedia.add(b_new)
-            val groupName = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
-
-            LiveSearchResponse(
-                groupName,
-                "$provider.mainUrl/-${media.id}-",
-                provider.name,
-                TvType.Live,
-                media.url_image,
-            )
-        } else {
-            null
-        }
+) {
+    fun toSearchResponseHomePage(
+        provider: MacIPTVProvider,
+    ): SearchResponse {
+        /* var b_new: String
+         var newgroupMedia: Boolean
+         val rgxcodeCountry = provider.rgxcodeCountry
+         val media = this
+         val b = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
+         b_new = b.take(6)
+         newgroupMedia = true
+         for (nameMedia in groupMedia) {
+             if (nameMedia.contains(b_new) && media.tv_genre_id == idGenre) {
+                 newgroupMedia = false
+                 break
+             }
+         }
+         groupMedia.contains(b_new)
+         if ( newgroupMedia //media.tv_genre_id == idGenre &&
+         ) {*/
+        //groupMedia.add(b_new)
+        val media = this
+        val groupName = cleanTitle(media.title).replace(provider.rgxcodeCountry, "").trim()
+        return LiveSearchResponse(
+            groupName,
+            "$provider.mainUrl/-${media.id}-",
+            provider.name,
+            TvType.Live,
+            media.url_image,
+        )
     }
-
 }
+
 
 class MacIPTVProvider(override var lang: String) : MainAPI() {
     private val defaulmac_adresse =
@@ -783,6 +777,9 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     arrayHomepage.add(
                         arraymedia.toHomePageList(nameGenre, provider, idGenre)
                     )
+                    if (provider.groupMedia.isNotEmpty()) {
+                        provider.groupMedia.clear()
+                    }
                 }
 
             }
@@ -790,13 +787,36 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         }
     }
 
+    var groupMedia = mutableListOf<String>()
+
     companion object {
         var companionName: String? = null
         var loginMac: String? = null
         var overrideUrl: String? = null
         fun List<Channel>.toHomePageList(name: String, provider: MacIPTVProvider, GenreId: String) =
             HomePageList(
-                name, this.toSearchResponseHomePage(provider, GenreId),
+                name, this.mapNotNull {
+
+                    var b_new: String
+                    var newgroupMedia: Boolean
+                    val rgxcodeCountry = provider.rgxcodeCountry
+                    val media = it
+                    val b = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
+                    b_new = b.take(6)
+                    newgroupMedia = true
+                    for (nameMedia in provider.groupMedia) {
+                        if (nameMedia.contains(b_new) && media.tv_genre_id == GenreId) {
+                            newgroupMedia = false
+                            break
+                        }
+                    }
+                    if (newgroupMedia && media.tv_genre_id == GenreId) { //
+                        provider.groupMedia.add(b_new)
+                        it.toSearchResponseHomePage(provider)
+                    } else {
+                        null
+                    }
+                },
                 isHorizontalImages = true
             )
 
