@@ -642,24 +642,26 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
             responseGetGenretoJSON.js.forEach { js ->
                 val idGenre = js.id
                 val categoryTitle = js.title.toString()
-
+                val arraymedia = ArrayList<Channel>()
                 if (idGenre!!.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
                         .contains(rgxcodeCountry) ||
                             categoryTitle.isContainsTargetCountry()
                             )
                 ) {
-                    AllchannelstoJSON.forEach { data ->
+                    val itr = AllchannelstoJSON.iterator()
+                    while (itr.hasNext()) {
+                        val data = itr.next()
                         val genre = data.tvGenreId
-
                         if (genre != null) {
                             if (genre == idGenre) {
+                                itr.remove()
                                 val name = data.name.toString()
                                 val tv_genre_id = data.tvGenreId
                                 val idCH = data.id
                                 val link = "http://localhost/ch/$idCH" + "_"
                                 val logo = data.logo?.replace("""\""", "")
                                 val ch_id = data.cmds[0].chId
-                                arraymediaPlaylist.add(
+                                arraymedia.add(
                                     Channel(
                                         name,
                                         link,
@@ -670,7 +672,18 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                                         ch_id
                                     )
                                 )
+                                arraymediaPlaylist.add(
+                                    Channel(
+                                        name,
+                                        link,
+                                        logo,
+                                        "",
+                                        idCH,
+                                        tv_genre_id,
+                                        ch_id
+                                    )
 
+                                )
                             }
                         }
                     }
@@ -680,8 +693,8 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                 val groupMedia = ArrayList<String>()
                 var b_new: String
                 var newgroupMedia: Boolean
-                val home = arraymediaPlaylist.mapNotNull { media ->
-                    val b = cleanTitle(media.title)//
+                val home = arraymedia.mapNotNull { media ->
+                    val b = cleanTitle(media.title)
                     b_new = b.take(6)
                     newgroupMedia = true
                     for (nameMedia in groupMedia) {
@@ -748,4 +761,3 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         })
     }
 }
-
