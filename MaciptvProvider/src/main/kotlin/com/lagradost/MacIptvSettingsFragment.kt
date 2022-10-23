@@ -69,7 +69,7 @@ class MacIptvSettingsFragment(private val plugin: Plugin, val maciptvAPI: MacIpt
         // object : View.OnClickListener is required to make it compile because otherwise it used invoke-customs
         infoView.setOnClickListener(object : View.OnClickListener {
             override fun onClick(v: View?) {
-                //openBrowser(maciptvAPI.createAccountUrl)
+                openBrowser(maciptvAPI.createAccountUrl)
             }
         })
 
