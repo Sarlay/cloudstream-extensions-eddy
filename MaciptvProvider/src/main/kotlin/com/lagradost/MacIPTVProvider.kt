@@ -69,23 +69,6 @@ data class Channel(
     fun toSearchResponseHomePage(
         provider: MacIPTVProvider,
     ): SearchResponse {
-        /* var b_new: String
-         var newgroupMedia: Boolean
-         val rgxcodeCountry = provider.rgxcodeCountry
-         val media = this
-         val b = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
-         b_new = b.take(6)
-         newgroupMedia = true
-         for (nameMedia in groupMedia) {
-             if (nameMedia.contains(b_new) && media.tv_genre_id == idGenre) {
-                 newgroupMedia = false
-                 break
-             }
-         }
-         groupMedia.contains(b_new)
-         if ( newgroupMedia //media.tv_genre_id == idGenre &&
-         ) {*/
-        //groupMedia.add(b_new)
         val media = this
         val groupName = cleanTitle(media.title).replace(provider.rgxcodeCountry, "").trim()
         return LiveSearchResponse(
