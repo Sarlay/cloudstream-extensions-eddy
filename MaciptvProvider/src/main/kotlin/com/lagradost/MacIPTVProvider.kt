@@ -8,6 +8,8 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.nicehttp.NiceResponse
 import kotlinx.coroutines.runBlocking
 import me.xdrop.fuzzywuzzy.FuzzySearch
+import com.lagradost.MacIPTVProvider.Companion.toHomePageList
+
 
 fun findKeyWord(str: String): Regex {
     val upperSTR = str.uppercase()
@@ -25,14 +27,14 @@ fun cleanTitleButKeepNumber(title: String): String {
         .replace(findKeyWord("VIP"), "")
         .replace("""UHD""", "").replace("""HEVC""", "")
         .replace("""HDR""", "").replace("""SD""", "").replace("""4K""", "")
-        .replace("""HD""", "")//.replace(rgxcodeCountry, "").trim()
+        .replace("""HD""", "")
 }
 
 fun cleanTitle(title: String): String {
     return cleanTitleButKeepNumber(title).replace(
         """(\s\d{1,}${'$'}|\s\d{1,}\s)""".toRegex(),
         " "
-    ) //.replace(rgxcodeCountry, "").trim()
+    )
 }
 
 fun getFlag(sequence: String): String {
@@ -55,6 +57,54 @@ fun getFlag(sequence: String): String {
     return flag
 }
 
+data class Channel(
+    var title: String,
+    var url: String,
+    val url_image: String?,
+    val lang: String?,
+    var id: String?,
+    var tv_genre_id: String?,
+    var ch_id: String?,
+)
+
+fun List<Channel>.toSearchResponseHomePage(
+    provider: MacIPTVProvider,
+    idGenre: String
+): List<SearchResponse> {
+    val groupMedia = ArrayList<String>()
+    var b_new: String
+    var newgroupMedia: Boolean
+    val rgxcodeCountry = provider.rgxcodeCountry
+    return this.mapNotNull { media ->
+        val b = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
+        b_new = b.take(6)
+        newgroupMedia = true
+        for (nameMedia in groupMedia) {
+            if (nameMedia.contains(b_new) && media.tv_genre_id == idGenre) {
+                newgroupMedia = false
+                break
+            }
+        }
+        groupMedia.contains(b_new)
+        if (media.tv_genre_id == idGenre && newgroupMedia
+        ) {
+            groupMedia.add(b_new)
+            val groupName = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
+
+            LiveSearchResponse(
+                groupName,
+                "$provider.mainUrl/-${media.id}-",
+                provider.name,
+                TvType.Live,
+                media.url_image,
+            )
+        } else {
+            null
+        }
+    }
+
+}
+
 class MacIPTVProvider(override var lang: String) : MainAPI() {
     private val defaulmac_adresse =
         "mac=00:1A:79:aa:53:65"
@@ -69,12 +119,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     private var firstInitDone = false
     private var key: String? = ""
-
-    companion object {
-        var companionName: String? = null
-        var loginMac: String? = null
-        var overrideUrl: String? = null
-    }
 
     private fun accountInfoNotGood(url: String, mac: String?): Boolean {
         return url.uppercase().trim() == "NONE" || url.isBlank() || mac?.uppercase()
@@ -428,15 +472,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     private val arraymediaPlaylist = ArrayList<Channel>()
 
-    data class Channel(
-        var title: String,
-        var url: String,
-        val url_image: String?,
-        val lang: String?,
-        var id: String?,
-        var tv_genre_id: String?,
-        var ch_id: String?,
-    )
 
     data class Cmds(
 
@@ -728,37 +763,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     }
                 }
                 /***************************************** */
-
-                val groupMedia = ArrayList<String>()
-                var b_new: String
-                var newgroupMedia: Boolean
-                val home = arraymedia.mapNotNull { media ->
-                    val b = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
-                    b_new = b.take(6)
-                    newgroupMedia = true
-                    for (nameMedia in groupMedia) {
-                        if (nameMedia.contains(b_new) && media.tv_genre_id == idGenre) {
-                            newgroupMedia = false
-                            break
-                        }
-                    }
-                    groupMedia.contains(b_new)
-                    if (media.tv_genre_id == idGenre && newgroupMedia
-                    ) {
-                        groupMedia.add(b_new)
-                        val groupName = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
-
-                        LiveSearchResponse(
-                            groupName,
-                            "$provider.mainUrl/-${media.id}-",
-                            provider.name,
-                            TvType.Live,
-                            media.url_image,
-                        )
-                    } else {
-                        null
-                    }
-                }
                 val flag: String
                 if (categoryTitle.uppercase()
                         .contains(rgxcodeCountry) || categoryTitle.isContainsTargetCountry(
@@ -776,7 +780,9 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     } else {
                         "$flag ${cleanTitle(categoryTitle).replace(rgxcodeCountry, "").trim()}"
                     }
-                    arrayHomepage.add(HomePageList(nameGenre, home, isHorizontalImages = true))
+                    arrayHomepage.add(
+                        arraymedia.toHomePageList(nameGenre, provider, idGenre)
+                    )
                 }
 
             }
@@ -784,4 +790,15 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         }
     }
 
+    companion object {
+        var companionName: String? = null
+        var loginMac: String? = null
+        var overrideUrl: String? = null
+        fun List<Channel>.toHomePageList(name: String, provider: MacIPTVProvider, GenreId: String) =
+            HomePageList(
+                name, this.toSearchResponseHomePage(provider, GenreId),
+                isHorizontalImages = true
+            )
+
+    }
 }
