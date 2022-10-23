@@ -693,7 +693,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
             genres.js.forEach { js ->
                 val idGenre = js.id
                 val categoryTitle = js.title.toString()
-                val arraymedia = ArrayList<Channel>()
+                val arraychannel = ArrayList<Channel>()
                 if (idGenre!!.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
                         .contains(rgxcodeCountry) ||
                             categoryTitle.isContainsTargetCountry(provider)
@@ -712,7 +712,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                                 val link = "http://localhost/ch/$idCH" + "_"
                                 val logo = data.logo?.replace("""\""", "")
                                 val ch_id = data.cmds[0].chId
-                                arraymedia.add(
+                                arraychannel.add(
                                     Channel(
                                         name,
                                         link,
@@ -758,7 +758,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                         "$flag ${cleanTitle(categoryTitle).replace(rgxcodeCountry, "").trim()}"
                     }
                     arrayHomepage.add(
-                        arraymedia.toHomePageList(nameGenre, provider, idGenre)
+                        arraychannel.toHomePageList(nameGenre, provider, idGenre)
                     )
                     if (provider.groupMedia.isNotEmpty()) {
                         provider.groupMedia.clear()
