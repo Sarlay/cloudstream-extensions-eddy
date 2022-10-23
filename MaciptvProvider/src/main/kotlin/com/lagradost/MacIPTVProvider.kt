@@ -595,8 +595,8 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
 
     val rgxcodeCountry = findKeyWord(codeCountry)
-    val arrayHomepage = arrayListOf<HomePageList>()
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val arrayHomepage = arrayListOf<HomePageList>()
         if (!firstInitDone) {
             val headerIPTV = getAuthHeader()
             val url_info =
