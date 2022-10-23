@@ -12,7 +12,6 @@ import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import com.lagradost.cloudstream3.R
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.lagradost.cloudstream3.AcraApplication.Companion.openBrowser
 import com.lagradost.cloudstream3.plugins.Plugin
 import com.lagradost.cloudstream3.ui.settings.SettingsAccount.Companion.showLoginInfo
 import com.lagradost.cloudstream3.ui.settings.SettingsAccount.Companion.addAccount
@@ -54,7 +53,7 @@ class MacIptvSettingsFragment(private val plugin: Plugin, val maciptvAPI: MacIpt
         val infoSubTextView = view.findView<TextView>("info_sub_text")
         val infoImageView = view.findView<ImageView>("nginx_info_imageview")
 
-        infoTextView.text = getString("nginx_info_title") ?: "Nginx"
+        infoTextView.text = getString("nginx_info_title") ?: "MacIPTV"
         infoSubTextView.text = getString("nginx_info_summary") ?: ""
         infoImageView.setImageDrawable(getDrawable("nginx_question"))
         infoImageView.imageTintList =
@@ -70,7 +69,7 @@ class MacIptvSettingsFragment(private val plugin: Plugin, val maciptvAPI: MacIpt
         // object : View.OnClickListener is required to make it compile because otherwise it used invoke-customs
         infoView.setOnClickListener(object : View.OnClickListener {
             override fun onClick(v: View?) {
-                openBrowser(maciptvAPI.createAccountUrl)
+                //openBrowser(maciptvAPI.createAccountUrl)
             }
         })
 

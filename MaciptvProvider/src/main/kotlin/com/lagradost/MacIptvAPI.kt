@@ -3,7 +3,6 @@ package com.lagradost
 import com.lagradost.cloudstream3.AcraApplication.Companion.getKey
 import com.lagradost.cloudstream3.AcraApplication.Companion.setKey
 import com.lagradost.cloudstream3.R
-import com.lagradost.cloudstream3.syncproviders.AccountManager
 import com.lagradost.cloudstream3.syncproviders.AuthAPI
 import com.lagradost.cloudstream3.syncproviders.InAppAuthAPI
 import com.lagradost.cloudstream3.syncproviders.InAppAuthAPIManager
@@ -36,7 +35,7 @@ class MacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
         setKey(accountId, IPTVBOX_USER_KEY, data)
         registerAccount()
         initialize()
-        AccountManager.inAppAuths
+        inAppAuths
 
         return true
     }
