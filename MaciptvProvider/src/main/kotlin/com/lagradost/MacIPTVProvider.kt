@@ -24,9 +24,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     private var firstInitDone = false
     private var key: String? = ""
-    private var headerIPTV = mapOf(
-        "" to "",
-    )
 
     companion object {
         var companionName: String? = null
@@ -34,53 +31,61 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         var overrideUrl: String? = null
     }
 
+    private fun accountInfoNotGood(url: String, mac: String?): Boolean {
+        return url.uppercase().trim() == "NONE" || url.isBlank() || mac?.uppercase()
+            ?.trim() == "NONE" || mac.isNullOrBlank()
+    }
+
     private suspend fun getAuthHeader(): Map<String, String> {
 
         mainUrl = overrideUrl.toString()
-        val main = mainUrl.uppercase().trim()
-        val localCredentials = loginMac
-        val mac = localCredentials?.uppercase()?.trim()
-
-        if (main == "NONE" || main.isBlank() || mac == "NONE" || mac.isNullOrBlank()) {
-            mainUrl = defaultmainUrl
-            name = defaultname
-
-            if (!firstInitDone) {
-                val url_key = "$mainUrl/portal.php?type=stb&action=handshake&JsHttpRequest=1-xml"
-                val reponseGetkey = app.get(
-                    url_key, headers = mapOf(
-                        "Cookie" to defaulmac_adresse,
-                        "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
-                    )
-                )
-                val keyJson = reponseGetkey.parsed<Getkey>()
-                key = keyJson.js?.token
-            }
-            firstInitDone = true
-            return mapOf(
-                "Cookie" to defaulmac_adresse,
-                "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
-                "Authorization" to "Bearer $key",
-            )
-        }
         name = (companionName ?: name) + " |${lang.uppercase()}|"
-        if (!firstInitDone) {
-            val url_key = "$mainUrl/portal.php?type=stb&action=handshake&JsHttpRequest=1-xml"
-            val reponseGetkey = app.get(
-                url_key, headers = mapOf(
+        val localCredentials = loginMac
+        when (true) {
+            accountInfoNotGood(mainUrl, localCredentials) -> {
+                mainUrl = defaultmainUrl
+                name = defaultname
+                if (!firstInitDone) {
+                    val url_key =
+                        "$mainUrl/portal.php?type=stb&action=handshake&JsHttpRequest=1-xml"
+                    val reponseGetkey = app.get(
+                        url_key, headers = mapOf(
+                            "Cookie" to defaulmac_adresse,
+                            "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
+                        )
+                    )
+                    val keyJson = reponseGetkey.parsed<Getkey>()
+                    key = keyJson.js?.token
+                }
+                firstInitDone = true
+                return mapOf(
+                    "Cookie" to defaulmac_adresse,
+                    "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
+                    "Authorization" to "Bearer $key",
+                )
+            }
+            else -> {
+                if (!firstInitDone) {
+                    val url_key =
+                        "$mainUrl/portal.php?type=stb&action=handshake&JsHttpRequest=1-xml"
+                    val reponseGetkey = app.get(
+                        url_key, headers = mapOf(
+                            "Cookie" to "mac=$localCredentials",
+                            "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
+                        )
+                    )
+                    val keyJson = reponseGetkey.parsed<Getkey>()
+                    key = keyJson.js?.token
+                }
+                firstInitDone = true
+                return mapOf(
                     "Cookie" to "mac=$localCredentials",
                     "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
+                    "Authorization" to "Bearer $key",
                 )
-            )
-            val keyJson = reponseGetkey.parsed<Getkey>()
-            key = keyJson.js?.token
+            }
         }
-        firstInitDone = true
-        return mapOf(
-            "Cookie" to "mac=$localCredentials",
-            "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
-            "Authorization" to "Bearer $key",
-        )
+
     }
 
 
@@ -177,6 +182,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         var posterUrl = ""
         var description = "The program for this channel was not found"
         val allresultshome: MutableList<SearchResponse> = mutableListOf()
+        val headerIPTV = getAuthHeader()
         for (media in arraymediaPlaylist) {
             val keyId = "/-${media.id}-"
             if (url.contains(keyId) || url == media.url) {
@@ -286,6 +292,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     var link: String
                     var lien: String
                     runBlocking {
+                        val headerIPTV = getAuthHeader()
                         val getTokenLink = app.get(TokenLink, headers = headerIPTV).text
                         val regexGetLink = Regex("""(http.*)\"\},""")
                         link = regexGetLink.find(getTokenLink)?.groupValues?.get(1).toString()
@@ -324,7 +331,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
-
+        val headerIPTV = getAuthHeader()
         val TokenLink =
             "$mainUrl/portal.php?type=itv&action=create_link&cmd=ffmpeg%20$data&series=&forced_storage=0&disable_ad=0&download=0&force_ch_link_check=0&JsHttpRequest=1-xml"
         val getTokenLink = app.get(TokenLink, headers = headerIPTV).text
@@ -591,7 +598,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
     val arrayHomepage = arrayListOf<HomePageList>()
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         if (!firstInitDone) {
-            headerIPTV = getAuthHeader()
+            val headerIPTV = getAuthHeader()
             val url_info =
                 "$mainUrl/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml"
             val urlGetGenre =
