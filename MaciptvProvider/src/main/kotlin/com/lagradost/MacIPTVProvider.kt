@@ -65,19 +65,20 @@ data class Channel(
     var id: String?,
     var tv_genre_id: String?,
     var ch_id: String?,
-)
+) {
+    fun toStringCode(): String {
+        return "${this.title}*${this.url}*${this.url_image}*${this.lang}*${this.id}*${this.tv_genre_id}*${this.ch_id}"
+    }
+}
 
-fun toSearchResponseHomePage(
-    channels: List<Channel>,
+fun List<Channel>.toSearchResponseHomePage(
     provider: MacIPTVProvider, GenreId: String
 ): List<SearchResponse> {
     val groupChannel = ArrayList<String>()
     var b_new: String
     var newgroupChannel: Boolean
-    val home = channels.mapNotNull { media ->
-        val groupName = cleanTitle(media.title).replace(provider.rgxcodeCountry, "").trim()
-
-        val rgxcodeCountry = provider.rgxcodeCountry
+    val rgxcodeCountry = provider.rgxcodeCountry
+    val home = this.mapNotNull { media ->
         val b = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
         b_new = b.take(6)
         newgroupChannel = true
@@ -89,10 +90,10 @@ fun toSearchResponseHomePage(
         }
         if (newgroupChannel && media.tv_genre_id == GenreId) {
             groupChannel.add(b_new)
-
+            val groupName = cleanTitle(media.title).replace(rgxcodeCountry, "").trim()
             LiveSearchResponse(
                 groupName,
-                "$provider.mainUrl/-${media.id}-",
+                "${provider.mainUrl}${media.toStringCode()}",
                 provider.name,
                 TvType.Live,
                 media.url_image,
@@ -120,6 +121,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     private var firstInitDone = false
     private var key: String? = ""
+    private var headerMac = mutableMapOf<String, String>()
 
     companion object {
         var companionName: String? = null
@@ -127,7 +129,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         var overrideUrl: String? = null
         fun List<Channel>.toHomePageList(name: String, provider: MacIPTVProvider, GenreId: String) =
             HomePageList(
-                name, toSearchResponseHomePage(this, provider, GenreId),
+                name, this.toSearchResponseHomePage(provider, GenreId),
                 isHorizontalImages = true
             )
     }
@@ -137,29 +139,42 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
             ?.trim() == "NONE" || mac.isNullOrBlank()
     }
 
-    private suspend fun getAuthHeader(): Map<String, String> {
+    private suspend fun getkey(mac: String) {
+        val adresseMac = if (!mac.contains("mac=")) {
+            "mac=$mac"
+        } else {
+            mac
+        }
+        val url_key =
+            "$mainUrl/portal.php?type=stb&action=handshake&JsHttpRequest=1-xml"
+        val reponseGetkey = app.get(
+            url_key, headers = mapOf(
+                "Cookie" to adresseMac,
+                "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
+            )
+        )
+        val keyJson = reponseGetkey.parsed<Getkey>()
+        key = keyJson.js?.token
+    }
 
+    init {
         mainUrl = overrideUrl.toString()
         name = (companionName ?: name) + " |${lang.uppercase()}|"
-        val localCredentials = loginMac
-        when (true) {
-            accountInfoNotGood(mainUrl, localCredentials) -> {
-                mainUrl = defaultmainUrl
-                name = defaultname
+        if (accountInfoNotGood(mainUrl, loginMac)) {
+            mainUrl = defaultmainUrl
+            name = defaultname
+        }
+    }
+
+    private suspend fun getAuthHeader() {
+        headerMac = when (true) {
+            accountInfoNotGood(mainUrl, loginMac) -> {
                 if (!firstInitDone) {
-                    val url_key =
-                        "$mainUrl/portal.php?type=stb&action=handshake&JsHttpRequest=1-xml"
-                    val reponseGetkey = app.get(
-                        url_key, headers = mapOf(
-                            "Cookie" to defaulmac_adresse,
-                            "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
-                        )
-                    )
-                    val keyJson = reponseGetkey.parsed<Getkey>()
-                    key = keyJson.js?.token
+                    getkey(defaulmac_adresse)
+                    firstInitDone = true
                 }
-                firstInitDone = true
-                return mapOf(
+
+                mutableMapOf(
                     "Cookie" to defaulmac_adresse,
                     "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
                     "Authorization" to "Bearer $key",
@@ -167,20 +182,12 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
             }
             else -> {
                 if (!firstInitDone) {
-                    val url_key =
-                        "$mainUrl/portal.php?type=stb&action=handshake&JsHttpRequest=1-xml"
-                    val reponseGetkey = app.get(
-                        url_key, headers = mapOf(
-                            "Cookie" to "mac=$localCredentials",
-                            "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
-                        )
-                    )
-                    val keyJson = reponseGetkey.parsed<Getkey>()
-                    key = keyJson.js?.token
+                    getkey(loginMac.toString())
+                    firstInitDone = true
                 }
-                firstInitDone = true
-                return mapOf(
-                    "Cookie" to "mac=$localCredentials",
+
+                mutableMapOf(
+                    "Cookie" to "mac=$loginMac",
                     "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
                     "Authorization" to "Bearer $key",
                 )
@@ -255,82 +262,80 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         return description
     }
 
+    fun String.getDataChannelFromString(): Channel {
+        val res = this.split("*")
+
+        return Channel(res[0], res[1], res[2], res[3], res[4], res[5], res[6])
+    }
+
 
     override suspend fun load(url: String): LoadResponse {
-
-        var link = url
-        var title = "Your channel"
-        var posterUrl = ""
-        var description = "The program for this channel was not found"
         val allresultshome: MutableList<SearchResponse> = mutableListOf()
-        val headerIPTV = getAuthHeader()
-        for (media in arraymediaPlaylist) {
-            val keyId = "/-${media.id}-"
-            if (url.contains(keyId) || url == media.url) {
-                val epg_url =
-                    "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${media.ch_id}&size=10&JsHttpRequest=1-xml" // plot
-                val response = app.get(epg_url, headers = headerIPTV)
-                description = getEpg(response.text)
-                link = media.url
-                title = media.title
-                val a = cleanTitle(title).replace(rgxcodeCountry, "").trim()
-                posterUrl = media.url_image.toString()
-                var b_new: String
-                arraymediaPlaylist.forEach { channel ->
-                    val b = cleanTitle(channel.title).replace(rgxcodeCountry, "").trim()
-                    b_new = b.take(6)
-                    if (channel.id != media.id && a.take(6)
-                            .contains(b_new) && media.tv_genre_id == channel.tv_genre_id
-                    ) {
-                        val streamurl = channel.url
-                        val channelname = channel.title
-                        val posterurl = channel.url_image.toString()
-                        val uppername = channelname.uppercase()
-                        val quality = getQualityFromString(
-                            when (!channelname.isNullOrBlank()) {
-                                uppername.contains(findKeyWord("UHD")) -> {
-                                    "UHD"
-                                }
-                                uppername.contains(findKeyWord("HD")) -> {
-                                    "HD"
-                                }
-                                uppername.contains(findKeyWord("SD")) -> {
-                                    "SD"
-                                }
-                                uppername.contains(findKeyWord("FHD")) -> {
-                                    "HD"
-                                }
-                                uppername.contains(findKeyWord("4K")) -> {
-                                    "FourK"
-                                }
+        val media = url.replace(mainUrl, "").getDataChannelFromString()
+        val epg_url =
+            "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${media.ch_id}&size=10&JsHttpRequest=1-xml" // plot
+        val response = app.get(epg_url, headers = headerMac)
+        val description = getEpg(response.text)
+        val link = media.url
+        val title = media.title
+        val a = cleanTitle(title).replace(rgxcodeCountry, "").trim()
+        val posterUrl = media.url_image.toString()
+        var b_new: String
+        arraymediaPlaylist.forEach { channel ->
+            val b = cleanTitle(channel.title).replace(rgxcodeCountry, "").trim()
+            b_new = b.take(6)
+            if (channel.id != media.id && a.take(6)
+                    .contains(b_new) && media.tv_genre_id == channel.tv_genre_id
+            ) {
 
-                                else -> {
-                                    null
-                                }
-                            }
-                        )
-                        allresultshome.add(
-                            LiveSearchResponse(
-                                name = cleanTitleButKeepNumber(channelname).replace(
-                                    rgxcodeCountry,
-                                    ""
-                                ).trim(),
-                                url = streamurl,
-                                name,
-                                TvType.Live,
-                                posterUrl = posterurl,
-                                quality = quality,
-                            )
-                        )
+                val streamurl = channel.toStringCode()
+                val channelname = channel.title
+                val posterurl = channel.url_image.toString()
+                val uppername = channelname.uppercase()
+                val quality = getQualityFromString(
+                    when (!channelname.isNullOrBlank()) {
+                        uppername.contains(findKeyWord("UHD")) -> {
+                            "UHD"
+                        }
+                        uppername.contains(findKeyWord("HD")) -> {
+                            "HD"
+                        }
+                        uppername.contains(findKeyWord("SD")) -> {
+                            "SD"
+                        }
+                        uppername.contains(findKeyWord("FHD")) -> {
+                            "HD"
+                        }
+                        uppername.contains(findKeyWord("4K")) -> {
+                            "FourK"
+                        }
 
+                        else -> {
+                            null
+                        }
                     }
+                )
+                allresultshome.add(
+                    LiveSearchResponse(
+                        name = cleanTitleButKeepNumber(channelname).replace(
+                            rgxcodeCountry,
+                            ""
+                        ).trim(),
+                        url = streamurl,
+                        name,
+                        TvType.Live,
+                        posterUrl = posterurl,
+                        quality = quality,
+                    )
+                )
 
-                }
 
-                break
             }
 
         }
+
+
+
 
         if (allresultshome.size >= 1) {
             val recommendation = allresultshome
@@ -376,8 +381,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     var link: String
                     var lien: String
                     runBlocking {
-                        val headerIPTV = getAuthHeader()
-                        val getTokenLink = app.get(TokenLink, headers = headerIPTV).text
+                        val getTokenLink = app.get(TokenLink, headers = headerMac).text
                         val regexGetLink = Regex("""(http.*)\"\},""")
                         link = regexGetLink.find(getTokenLink)?.groupValues?.get(1).toString()
                             .replace(
@@ -415,10 +419,9 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
-        val headerIPTV = getAuthHeader()
         val TokenLink =
             "$mainUrl/portal.php?type=itv&action=create_link&cmd=ffmpeg%20$data&series=&forced_storage=0&disable_ad=0&download=0&force_ch_link_check=0&JsHttpRequest=1-xml"
-        val getTokenLink = app.get(TokenLink, headers = headerIPTV).text
+        val getTokenLink = app.get(TokenLink, headers = headerMac).text
         val regexGetLink = Regex("""(http.*)\"\},""")
         val link =
             regexGetLink.find(getTokenLink)?.groupValues?.get(1).toString().replace("""\""", "")
@@ -518,58 +521,56 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
 
     val rgxcodeCountry = findKeyWord(codeCountry)
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        var arrayHomepage = mutableListOf<HomePageList>()
-        if (page == 1) {
-            val headerIPTV = getAuthHeader()
-            val url_info =
-                "$mainUrl/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml"
-            val urlGetGenre =
-                "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"
-            val urlGetallchannels =
-                "$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
+    suspend fun getPortalInfo(url: String): NiceResponse? {
+        return app.get(url, headers = headerMac)
+    }
 
-            var reponseGetInfo: NiceResponse? = null
-            var responseGetgenre: NiceResponse? = null
-            var responseAllchannels: NiceResponse? = null
-            listOf(
-                url_info,
-                urlGetGenre,
-                urlGetallchannels
-            ).apmap { url ->
-                val response = app.get(url, headers = headerIPTV)
-                when (true) {
-                    url.contains("action=get_main_info") -> {
-                        reponseGetInfo = response
-                    }
-                    url.contains("action=get_genre") -> {
-                        responseGetgenre = response
-                    }
-                    url.contains("action=get_all_channels") -> {
-                        responseAllchannels = response
-                    }
-                    else -> {
-                        ""
-                    }
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        getAuthHeader()
+        var reponseGetInfo: NiceResponse? = null
+        var responseGetgenre: NiceResponse? = null
+        var responseAllchannels: NiceResponse? = null
+        if (arraymediaPlaylist.isNotEmpty()) {
+            println("NotEmpty")
+        } else {
+            println("LOLO")
+        }
+        listOf(
+            "$mainUrl/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml",
+            "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml",
+            "$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
+        ).apmap { url ->
+            when (true) {
+                url.contains("action=get_main_info") -> {
+                    reponseGetInfo = getPortalInfo(url)
+                }
+                url.contains("action=get_genre") -> {
+                    responseGetgenre = getPortalInfo(url)
+                }
+                url.contains("action=get_all_channels") -> {
+                    responseAllchannels = getPortalInfo(url)
+                }
+                else -> {
+                    ""
                 }
             }
-            ///////////// GET EXPIRATION
-            val infoExpirationJson = reponseGetInfo!!.parsed<GetExpiration>()
-            val expiration = infoExpirationJson.js?.phone.toString()
-            ////////////////////////// GET ALL GENRES
-            val responseGetGenretoJSON = responseGetgenre!!.parsed<JsonGetGenre>()
-            ////////////////////////// GET ALL CHANNELS
-            val responseAllchannelstoJSON = responseAllchannels!!.parsed<Root>()
-            val AllchannelstoJSON = responseAllchannelstoJSON.js!!.data.sortByTitleNumber()
-            arrayHomepage = HomeResponse(
+        }
+
+        ///////////// GET EXPIRATION
+        val infoExpirationJson = reponseGetInfo!!.parsed<GetExpiration>()
+        val expiration = infoExpirationJson.js?.phone.toString()
+        ////////////////////////// GET ALL GENRES
+        val responseGetGenretoJSON = responseGetgenre!!.parsed<JsonGetGenre>()
+        ////////////////////////// GET ALL CHANNELS
+        val responseAllchannelstoJSON = responseAllchannels!!.parsed<Root>()
+        val AllchannelstoJSON = responseAllchannelstoJSON.js!!.data.sortByTitleNumber()
+
+        return HomePageResponse(
+            HomeResponse(
                 responseGetGenretoJSON,
                 AllchannelstoJSON,
                 expiration,
-            ).getHomePageLists(this)
-        }
-
-        return HomePageResponse(
-            arrayHomepage, false
+            ).getHomePageLists(this), false
         )
     }
 
@@ -615,9 +616,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                 }
                 else -> resp = false
             }
-
-
-
             return resp
         }
 
@@ -669,7 +667,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                                         tv_genre_id,
                                         ch_id
                                     )
-
                                 )
                             }
                         }
@@ -695,7 +692,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                         arraychannel.toHomePageList(nameGenre, provider, idGenre)
                     )
                 }
-
             }
             return arrayHomepage
         }
