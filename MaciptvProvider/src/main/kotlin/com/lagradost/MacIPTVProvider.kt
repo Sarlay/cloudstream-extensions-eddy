@@ -9,15 +9,13 @@ import com.lagradost.nicehttp.NiceResponse
 import kotlinx.coroutines.runBlocking
 import me.xdrop.fuzzywuzzy.FuzzySearch
 
-//import com.lagradost.MacIPTVProvider.Companion.toHomePageList
-
 class MacIPTVProvider(override var lang: String) : MainAPI() {
     private val defaulmac_adresse =
         "mac=00:1A:79:aa:53:65"
     private val defaultmainUrl =
         "http://ky-iptv.com:25461/portalstb"
     var defaultname = "ky-iptv |${lang.uppercase()}|"
-    override var name = "Box Iptv |${lang.uppercase()}|"
+    override var name = "Box Iptv"
     override val hasQuickSearch = false
     override val hasMainPage = true
     override val supportedTypes =
@@ -25,7 +23,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     private var firstInitDone = false
     private var key: String? = ""
-    private var headerMac = mutableMapOf<String, String>()
 
 
     private fun accountInfoNotGood(url: String, mac: String?): Boolean {
@@ -458,7 +455,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                 }
             }
         }
-        
+
         ///////////// GET EXPIRATION
         val infoExpirationJson = reponseGetInfo!!.parsed<GetExpiration>()
         val expiration = infoExpirationJson.js?.phone.toString()
@@ -611,7 +608,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         var companionName: String? = null
         var loginMac: String? = null
         var overrideUrl: String? = null
-
+        private var headerMac = mutableMapOf<String, String>()
         fun findKeyWord(str: String): Regex {
             val upperSTR = str.uppercase()
             val sequence = when (true) {
