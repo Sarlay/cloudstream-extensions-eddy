@@ -154,7 +154,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     }
 
-
     private fun List<Channel>.sortByname(query: String?): List<Channel> {
         return if (query == null) {
             // Return list to base state if no query
@@ -189,38 +188,18 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                 )
             )
         }
-
         return searchResutls
-
     }
 
     data class Root_epg(
-
         @JsonProperty("js") var js: ArrayList<Js_epg> = arrayListOf()
-
     )
 
     data class Js_epg(
-
-        /*   @JsonProperty("id") var id: String? = null,
-           @JsonProperty("ch_id") var chId: String? = null,
-           @JsonProperty("correct") var correct: String? = null,
-           @JsonProperty("time") var time: String? = null,
-           @JsonProperty("time_to") var timeTo: String? = null,
-           @JsonProperty("duration") var duration: Int? = null,*/
         @JsonProperty("name") var name: String? = null,
         @JsonProperty("descr") var descr: String? = null,
-/*        @JsonProperty("real_id") var realId: String? = null,
-        @JsonProperty("category") var category: String? = null,
-        @JsonProperty("director") var director: String? = null,
-        @JsonProperty("actor") var actor: String? = null,
-        @JsonProperty("start_timestamp") var startTimestamp: Int? = null,
-        @JsonProperty("stop_timestamp") var stopTimestamp: Int? = null,*/
         @JsonProperty("t_time") var tTime: String? = null,
         @JsonProperty("t_time_to") var tTimeTo: String? = null,
-        /*     @JsonProperty("mark_memo") var markMemo: Int? = null,
-             @JsonProperty("mark_archive") var markArchive: Int? = null*/
-
     )
 
     private fun getEpg(response: String): String {
@@ -451,131 +430,52 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
 
     data class Cmds(
-
-        // @JsonProperty("id") var id: String? = null,
         @JsonProperty("ch_id") var chId: String? = null,
-        /*      @JsonProperty("priority") var priority: String? = null,
-              @JsonProperty("url") var url: String? = null,
-              @JsonProperty("status") var status: String? = null,
-              @JsonProperty("use_http_tmp_link") var useHttpTmpLink: String? = null,
-              @JsonProperty("wowza_tmp_link") var wowzaTmpLink: String? = null,
-              @JsonProperty("user_agent_filter") var userAgentFilter: String? = null,
-              @JsonProperty("use_load_balancing") var useLoadBalancing: String? = null,
-              @JsonProperty("changed") var changed: String? = null,
-              @JsonProperty("enable_monitoring") var enableMonitoring: String? = null,
-              @JsonProperty("enable_balancer_monitoring") var enableBalancerMonitoring: String? = null,
-              @JsonProperty("nginx_secure_link") var nginxSecureLink: String? = null,
-              @JsonProperty("flussonic_tmp_link") var flussonicTmpLink: String? = null*/
-
     )
 
     data class Data(
-
         @JsonProperty("id") var id: String? = null,
         @JsonProperty("name") var name: String? = null,
         @JsonProperty("number") var number: String? = null,
-/*        @JsonProperty("censored") var censored: Int? = null,
-        @JsonProperty("cmd") var cmd: String? = null,
-        @JsonProperty("cost") var cost: String? = null,
-        @JsonProperty("count") var count: String? = null,
-        @JsonProperty("status") var status: Int? = null,
-        @JsonProperty("hd") var hd: String? = null,*/
         @JsonProperty("tv_genre_id") var tvGenreId: String? = null,
-/*        @JsonProperty("base_ch") var baseCh: String? = null,
-        @JsonProperty("xmltv_id") var xmltvId: String? = null,
-        @JsonProperty("service_id") var serviceId: String? = null,
-        @JsonProperty("bonus_ch") var bonusCh: String? = null,
-        @JsonProperty("volume_correction") var volumeCorrection: String? = null,
-        @JsonProperty("mc_cmd") var mcCmd: String? = null,
-        @JsonProperty("enable_tv_archive") var enableTvArchive: Int? = null,
-        @JsonProperty("wowza_tmp_link") var wowzaTmpLink: String? = null,
-        @JsonProperty("wowza_dvr") var wowzaDvr: String? = null,
-        @JsonProperty("use_http_tmp_link") var useHttpTmpLink: String? = null,
-        @JsonProperty("monitoring_status") var monitoringStatus: String? = null,
-        @JsonProperty("enable_monitoring") var enableMonitoring: String? = null,
-        @JsonProperty("enable_wowza_load_balancing") var enableWowzaLoadBalancing: String? = null,
-        @JsonProperty("cmd_1") var cmd1: String? = null,
-        @JsonProperty("cmd_2") var cmd2: String? = null,
-        @JsonProperty("cmd_3") var cmd3: String? = null,*/
         @JsonProperty("logo") var logo: String? = null,
-        /*     @JsonProperty("correct_time") var correctTime: String? = null,
-             @JsonProperty("nimble_dvr") var nimbleDvr: String? = null,
-             @JsonProperty("allow_pvr") var allowPvr: Int? = null,
-             @JsonProperty("allow_local_pvr") var allowLocalPvr: Int? = null,
-             @JsonProperty("allow_remote_pvr") var allowRemotePvr: Int? = null,
-             @JsonProperty("modified") var modified: String? = null,
-             @JsonProperty("allow_local_timeshift") var allowLocalTimeshift: String? = null,
-             @JsonProperty("nginx_secure_link") var nginxSecureLink: String? = null,
-             @JsonProperty("tv_archive_duration") var tvArchiveDuration: Int? = null,
-             @JsonProperty("locked") var locked: Int? = null,
-             @JsonProperty("lock") var lock: Int? = null,
-             @JsonProperty("fav") var fav: Int? = null,
-             @JsonProperty("archive") var archive: Int? = null,
-             @JsonProperty("genres_str") var genresStr: String? = null,
-             @JsonProperty("cur_playing") var curPlaying: String? = null,
-             @JsonProperty("epg") var epg: ArrayList<String> = arrayListOf(),
-             @JsonProperty("open") var open: Int? = null,*/
         @JsonProperty("cmds") var cmds: ArrayList<Cmds> = arrayListOf(),
-        /* @JsonProperty("use_load_balancing") var useLoadBalancing: Int? = null,
-         @JsonProperty("pvr") var pvr: Int? = null*/
-
     )
 
     data class JsKey(
-
         @JsonProperty("token") var token: String? = null
-
     )
 
     data class Getkey(
-
         @JsonProperty("js") var js: JsKey? = JsKey()
-
     )
 
     data class JsInfo(
-
         @JsonProperty("mac") var mac: String? = null,
         @JsonProperty("phone") var phone: String? = null
-
     )
 
     data class GetExpiration(
-
         @JsonProperty("js") var js: JsInfo? = JsInfo()
-
     )
 
     data class Js(
-
         @JsonProperty("total_items") var totalItems: Int? = null,
         @JsonProperty("max_page_items") var maxPageItems: Int? = null,
-        /*  @JsonProperty("selected_item") var selectedItem: Int? = null,
-          @JsonProperty("cur_page") var curPage: Int? = null,*/
         @JsonProperty("data") var data: ArrayList<Data> = arrayListOf()
-
     )
 
     data class JsonGetGenre(
-
         @JsonProperty("js") var js: ArrayList<Js_category> = arrayListOf()
-
     )
 
     data class Js_category(
-
         @JsonProperty("id") var id: String? = null,
         @JsonProperty("title") var title: String? = null,
-        /*  @JsonProperty("alias") var alias: String? = null,
-          @JsonProperty("active_sub") var activeSub: Boolean? = null,
-          @JsonProperty("censored") var censored: Int? = null*/
-
     )
 
     data class Root(
-
         @JsonProperty("js") var js: Js? = Js()
-
     )
 
     private var codeCountry = lang
@@ -583,57 +483,53 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     val rgxcodeCountry = findKeyWord(codeCountry)
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        var arrayHomepage = mutableListOf<HomePageList>()
-        if (!firstInitDone) {
-            val headerIPTV = getAuthHeader()
-            val url_info =
-                "$mainUrl/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml"
-            val urlGetGenre =
-                "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"
-            val urlGetallchannels =
-                "$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
+        val headerIPTV = getAuthHeader()
+        val url_info =
+            "$mainUrl/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml"
+        val urlGetGenre =
+            "$mainUrl/portal.php?type=itv&action=get_genres&JsHttpRequest=1-xml"
+        val urlGetallchannels =
+            "$mainUrl/portal.php?type=itv&action=get_all_channels&JsHttpRequest=1-xml"
 
-            var reponseGetInfo: NiceResponse? = null
-            var responseGetgenre: NiceResponse? = null
-            var responseAllchannels: NiceResponse? = null
-            listOf(
-                url_info,
-                urlGetGenre,
-                urlGetallchannels
-            ).apmap { url ->
-                val response = app.get(url, headers = headerIPTV)
-                when (true) {
-                    url.contains("action=get_main_info") -> {
-                        reponseGetInfo = response
-                    }
-                    url.contains("action=get_genre") -> {
-                        responseGetgenre = response
-                    }
-                    url.contains("action=get_all_channels") -> {
-                        responseAllchannels = response
-                    }
-                    else -> {
-                        ""
-                    }
+        var reponseGetInfo: NiceResponse? = null
+        var responseGetgenre: NiceResponse? = null
+        var responseAllchannels: NiceResponse? = null
+        listOf(
+            url_info,
+            urlGetGenre,
+            urlGetallchannels
+        ).apmap { url ->
+            val response = app.get(url, headers = headerIPTV)
+            when (true) {
+                url.contains("action=get_main_info") -> {
+                    reponseGetInfo = response
+                }
+                url.contains("action=get_genre") -> {
+                    responseGetgenre = response
+                }
+                url.contains("action=get_all_channels") -> {
+                    responseAllchannels = response
+                }
+                else -> {
+                    ""
                 }
             }
-            ///////////// GET EXPIRATION
-            val infoExpirationJson = reponseGetInfo!!.parsed<GetExpiration>()
-            val expiration = infoExpirationJson.js?.phone.toString()
-            ////////////////////////// GET ALL GENRES
-            val responseGetGenretoJSON = responseGetgenre!!.parsed<JsonGetGenre>()
-            ////////////////////////// GET ALL CHANNELS
-            val responseAllchannelstoJSON = responseAllchannels!!.parsed<Root>()
-            val AllchannelstoJSON = responseAllchannelstoJSON.js!!.data.sortByTitleNumber()
-            arrayHomepage = HomeResponse(
+        }
+        ///////////// GET EXPIRATION
+        val infoExpirationJson = reponseGetInfo!!.parsed<GetExpiration>()
+        val expiration = infoExpirationJson.js?.phone.toString()
+        ////////////////////////// GET ALL GENRES
+        val responseGetGenretoJSON = responseGetgenre!!.parsed<JsonGetGenre>()
+        ////////////////////////// GET ALL CHANNELS
+        val responseAllchannelstoJSON = responseAllchannels!!.parsed<Root>()
+        val AllchannelstoJSON = responseAllchannelstoJSON.js!!.data.sortByTitleNumber()
+
+        return HomePageResponse(
+            HomeResponse(
                 responseGetGenretoJSON,
                 AllchannelstoJSON,
                 expiration,
-            ).getHomePageLists(this)
-        }
-
-        return HomePageResponse(
-            arrayHomepage
+            ).getHomePageLists(this), false
         )
     }
 
