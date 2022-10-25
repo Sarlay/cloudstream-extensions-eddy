@@ -627,12 +627,13 @@ class AnimeSamaProvider : MainAPI() {
 
     private fun Element.toSearchResponseNewEp(): SearchResponse? {
         val figcaption = select("a >figcaption > span").text()
-        if (figcaption.lowercase().trim() != "scan") {
+        val link = select("a").attr("href")
+        if (figcaption.lowercase().trim() != "scan" && !link.lowercase().contains("/scan/")) {
             val posterUrl = select("a > img").attr("src")
             //val type = figcaption.lowercase()
             val scheduleTime = select("a >span.badgeHautDroite").text()
             val title = select("a >figcaption").text().replace("$figcaption", "")
-            val link = select("a").attr("href")
+
             if (link.contains("search.php")) {
                 return null
             }
