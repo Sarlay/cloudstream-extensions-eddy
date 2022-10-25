@@ -23,8 +23,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     private var firstInitDone = false
     private var key: String? = ""
-    private var oldAthMac: String? = null
-    private var oldAthUrl: String? = null
+
 
     private fun detectNewAccount(): Boolean {
         return oldAthMac != loginMac || oldAthUrl != overrideUrl
@@ -474,9 +473,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
             return HomePageResponse(
                 HomeResponse(
-                    responseGetGenretoJSON,
                     AllchannelstoJSON,
-                    expiration!!,
                 ).getHomePageListsInit(this), false
             )
         } else {
@@ -497,9 +494,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
 
     private data class HomeResponse(
-        val genres: ArrayList<Js_category> = ArrayList(),
         val channels: ArrayList<Data> = ArrayList(),
-        val expiration: String = "Undefined",
     ) {
         fun String.isContainsTargetCountry(provider: MacIPTVProvider): Boolean {
             val getLang = provider.lang.uppercase()
@@ -536,8 +531,8 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
             val arrayHomepage = mutableListOf<HomePageList>()
             val rgxcodeCountry = provider.rgxcodeCountry
             var firstCat = true
-            if (genres.isNotEmpty() && channels.isNotEmpty()) {
-                genres.forEach { js ->
+            if (responseGetGenretoJSON.isNotEmpty() && channels.isNotEmpty()) {
+                responseGetGenretoJSON.forEach { js ->
                     val idGenre = js.id
                     val categoryTitle = js.title.toString()
                     val arraychannel = ArrayList<Channel>()
@@ -653,6 +648,8 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         var companionName: String? = null
         var loginMac: String? = null
         var overrideUrl: String? = null
+        private var oldAthMac: String? = null
+        private var oldAthUrl: String? = null
         private var headerMac = mutableMapOf<String, String>()
         var expiration: String? = null
         var responseGetGenretoJSON = ArrayList<Js_category>() // all genres from the provider
