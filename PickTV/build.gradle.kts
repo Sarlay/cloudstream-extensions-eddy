@@ -16,7 +16,7 @@ cloudstream {
      * 2: Slow
      * 3: Beta only
      * */
-    status = 0 // will be 3 if unspecified
+    status = 1 // will be 3 if unspecified
     tvTypes = listOf("Live")
 
     iconUrl = "https://thumbs.dreamstime.com/b/sur-les-ailes-de-la-libert%C3%A9-oiseaux-volant-et-cha%C3%AEnes-cass%C3%A9es-concept-charge-146675254.jpg"
