@@ -360,10 +360,15 @@ class AnimeSamaProvider : MainAPI() {
         )
         var concatAll = ""
         resultsAllContent.forEach {
-            concatAll = concatAll + it.groupValues[0].replace("\n", "").replace("\t", "")
+            concatAll =
+                concatAll + it.groupValues[0].replace(
+                    """[\s]*\/\/[\s]*[^\,]+[\s]*\n""".toRegex(),
+                    ""
+                )
+                    .replace("\n", "").replace("\t", "")
         }
         concatAll = concatAll.replace("][", "*").replace("[", "*")
-            .replace("""[\s]*\/\/[\s]*\d+[\s]*""".toRegex(), "")
+
         var sumlink = ""
         while (concatAll.contains("*'")) {
             Regex("""\*'[^']*',""").findAll(concatAll).forEach {
@@ -481,11 +486,11 @@ class AnimeSamaProvider : MainAPI() {
 
         }
 
-               listOf(dubEpisodes, subEpisodes).apmap {
-                   it.apmap { episode ->
-                       episode.posterUrl = poster//episode.data.findPosterfromEmbedUrl()
-                   }
-               }
+        listOf(dubEpisodes, subEpisodes).apmap {
+            it.apmap { episode ->
+                episode.posterUrl = poster//episode.data.findPosterfromEmbedUrl()
+            }
+        }
 
         val recommendations = documentBack.select("div.synsaisons > li")
         val allresultshome: MutableList<SearchResponse> = mutableListOf()
@@ -621,16 +626,16 @@ class AnimeSamaProvider : MainAPI() {
     }
 
     val findAllNumber = Regex("""([0-9]+)""")
-    private suspend fun Element.toSearchResponse(): SearchResponse? {
-        val figcaption = select("a >figcaption > span").text()
+    private suspend fun MutableList<SearchResponse>.toSearchResponse(element: Element): Boolean {
+        val figcaption = element.select("a >figcaption > span").text()
         if (figcaption.lowercase().trim() != "scan") {
-            val posterUrl = select("a > img").attr("src")
+            val posterUrl = element.select("a > img").attr("src")
             //val type = figcaption.lowercase()
 
-            val title = select("a >figcaption").text().replace(figcaption, "")
-            val global_link = select("a").attr("href")
+            val title = element.select("a >figcaption").text().replace(figcaption, "")
+            val global_link = element.select("a").attr("href")
             if (global_link.contains("search.php")) {
-                return null
+                return false
             }
             val document = app.get(global_link).document
             val (link, dub) = document.select("div.synsaisons > li").tryTofindLatestSeason()
@@ -646,7 +651,7 @@ class AnimeSamaProvider : MainAPI() {
                 tv_type = TvType.AnimeMovie
             }
 
-            return newAnimeSearchResponse(
+            this.add(newAnimeSearchResponse(
                 title,
                 link.toString(),
                 tv_type,
@@ -654,11 +659,10 @@ class AnimeSamaProvider : MainAPI() {
             ) {
                 this.posterUrl = posterUrl
                 this.dubStatus = dubstatus
-            }
+            })
 
-        } else {
-            return null
         }
+        return true
 
     }
 
@@ -743,20 +747,23 @@ class AnimeSamaProvider : MainAPI() {
             cssSelectorN = "div#$idDay>div#sectionsAccueil > figure"
         }
         val document = app.get(url).document
+        val home: MutableList<SearchResponse> = mutableListOf()
 
-        val home = when (!categoryName.isBlank()) {
-            categoryName.contains("NOUVEAUX") -> document.select(cssSelectorN)
-                .mapNotNull { article -> article.toSearchResponseNewEp() }
+        when (!categoryName.isBlank()) {
+            categoryName.contains("NOUVEAUX") -> {
+                categoryName =
+                    document.select("div#$idDay.fadeJours > div.col-12>p.titreJours").text()
+                return newHomePageResponse(categoryName, document.select(cssSelectorN)
+                    .mapNotNull { article -> article.toSearchResponseNewEp() })
+            }
             categoryName.contains("ajoutés") -> document.select(cssSelector)[2].select("figure")
-                .mapNotNull { article -> article.toSearchResponse() }
+                .apmap { article -> home.toSearchResponse(article) }
             categoryName.contains("rater") -> document.select(cssSelector)[1].select("figure")
-                .mapNotNull { article -> article.toSearchResponse() }
+                .apmap { article -> home.toSearchResponse(article) }
             else -> document.select(cssSelector)[0].select("figure")
-                .mapNotNull { article -> article.toSearchResponse() }
+                .apmap { article -> home.toSearchResponse(article) }
         }
-        if (categoryName.contains("NOUVEAUX")) {
-            categoryName = document.select("div#$idDay.fadeJours > div.col-12>p.titreJours").text()
-        }
+
         return newHomePageResponse(categoryName, home)
     }
 }
