@@ -283,10 +283,8 @@ class AnimeSamaProvider : MainAPI() {
     suspend fun ArrayList<Episode>.getEpisodes(
         html: NiceResponse,
         url: String,
-        poster: String,
     ) {
         //val flag = getFlag(dubStatus)
-        val episodesLink = ArrayList<String>()
         val document = html.document
         val scpritAllEpisode =
             document.select("script[src*=\"filever\"]").attr("src") ?: "episodes.js"
@@ -301,10 +299,8 @@ class AnimeSamaProvider : MainAPI() {
         //////////////////////////////////////
         /////////////////////////////////////
         var idx_EpStart: Int
-        var link_poster: String
         ///////////////////////////////////
         /////////////////////////////////
-
 
         val all_title = document.select("select#selectEps.episodes > option")
         val isTitleEp = !all_title.isNullOrEmpty()
@@ -362,72 +358,35 @@ class AnimeSamaProvider : MainAPI() {
             allstartForLoop,
             allEndForLoop,
         )
-        val allcontentSize = resultsAllContent.count()
-        var line = 0
-        var maxEpisode = 1
-        var indexContent = 0
-        var alreadyConcatNlink = false
-        var countconcat = 1
-        var groupurl: String
-        var urlAtline: String
-        while (line < maxEpisode) {
-            resultsAllContent.forEach { contentEpisodeLink ->
-
-                val AllLinkEpisodeFromContent_i =
-                    regexAllLinkepisode.findAll(contentEpisodeLink.groupValues[0])
-                val nbr_Ep = AllLinkEpisodeFromContent_i.count()
-                if (nbr_Ep != 0 && line < maxEpisode) {
-                    if (nbr_Ep > maxEpisode) { // update maxEpisode found
-                        maxEpisode = nbr_Ep
-                    }
-                    if (line < nbr_Ep) {
-                        urlAtline = AllLinkEpisodeFromContent_i.elementAt(line).groupValues[0]
-
-                        if (indexContent == 0 || alreadyConcatNlink || line == episodesLink.size) { // start new line
-                            alreadyConcatNlink = false
-                            episodesLink.add(urlAtline)
-                            countconcat = 1
-                        } else {
-                            episodesLink[line] = episodesLink[line] + urlAtline
-                            countconcat++
-                            if (countconcat == allcontentSize) { // detect if we concatenate all links
-                                alreadyConcatNlink = true
-                            }
-                        }
-                    }
-                    if (indexContent == allcontentSize - 1) {
-                        indexContent = 0
-                        dataLoop = loopLookingforEpisodeTitle(dataLoop, dataset)
-                        groupurl = episodesLink[line]
-                        link_poster = poster//groupurl.findPosterfromEmbedUrl()
-                        this.add(
-                            Episode(
-                                data = groupurl,
-                                episode = dataLoop.results.epNo,
-                                name = dataLoop.results.episode_tite,
-                                posterUrl = link_poster
-                            )
-                        )
-                        line++
-
-                    } else {
-                        indexContent++
-
-                    }
-
-                } else {
-                    countconcat++
-                    if (countconcat == allcontentSize) { // detect if we concatenate all links
-                        line = maxEpisode + 1
-                    }
-
-                }
+        var concatAll = ""
+        resultsAllContent.forEach {
+            concatAll = concatAll + it.groupValues[0].replace("\n", "").replace("\t", "")
+        }
+        concatAll = concatAll.replace("][", "*").replace("[", "*")
+            .replace("""[\s]*\/\/[\s]*\d+[\s]*""".toRegex(), "")
+        var sumlink = ""
+        while (concatAll.contains("*'")) {
+            Regex("""\*'[^']*',""").findAll(concatAll).forEach {
+                concatAll = concatAll.replace(it.groupValues[0], "*")
+                sumlink = sumlink + it.groupValues[0]
             }
+            dataLoop = loopLookingforEpisodeTitle(dataLoop, dataset)
+            if (dataLoop.results.epNo == 358) {
+                println("")
+            }
+            this.add(
+                Episode(
+                    data = sumlink,
+                    episode = dataLoop.results.epNo,
+                    name = dataLoop.results.episode_tite,
+                    //posterUrl = link_poster
+                )
+            )
+            sumlink = ""
         }
     }
 
     private val regexAllcontentEpisode = Regex("""\[[^\]]*]""")
-    private val regexAllLinkepisode = Regex("""'[^']*',""")
     private val regexCreateEp = Regex("""for[\s]+\(var[\s]+i[\s]+=[\s]+([0-9]+)[\s]*;""")
     private val regexgetLoopEnd = Regex("""i[\s]*<=[\s]*([0-9]+)""")
 
@@ -451,7 +410,7 @@ class AnimeSamaProvider : MainAPI() {
         return ""
     }
 
-    fun findlinkforSuborDub(html: NiceResponse, url: String, title: String): String {
+    fun findlinkforSuborDub(html: NiceResponse, url: String): String {
         val recommendations = html.document.select("div.synsaisons > li")
         val titleInit =
             findOrigintitle(html, url).uppercase().replace("VOSTFR", "").replace("VF", "")
@@ -486,7 +445,7 @@ class AnimeSamaProvider : MainAPI() {
         val poster = documentBack.select("img.d-block.w-100")[0].attr("src")
         var title = document.select("p.soustitreaccueil.syntitreanime").text()
         var status = false
-        val urlSubDub = findlinkforSuborDub(htmlBack, url, title)
+        val urlSubDub = findlinkforSuborDub(htmlBack, url)
         var htmlSubDub: NiceResponse? = null
         if (urlSubDub != url) {
             htmlSubDub = app.get(urlSubDub)
@@ -495,11 +454,11 @@ class AnimeSamaProvider : MainAPI() {
 
             listOf("SUB", "DUB").apmap {
                 if (it == "SUB") {
-                    subEpisodes.getEpisodes(html, url, poster)
+                    subEpisodes.getEpisodes(html, url)
                     if (subEpisodes.isEmpty()) status = true
                 }
                 if (it == "DUB" && htmlSubDub != null) {
-                    dubEpisodes.getEpisodes(htmlSubDub, urlSubDub, poster)
+                    dubEpisodes.getEpisodes(htmlSubDub, urlSubDub)
                     if (dubEpisodes.isNotEmpty()) {
                         title = title.replace("VOSTFR", "").replace("VF", "")
                     }
@@ -508,23 +467,25 @@ class AnimeSamaProvider : MainAPI() {
         } else {
             listOf("SUB", "DUB").apmap {
                 if (it == "SUB" && htmlSubDub != null) {
-                    subEpisodes.getEpisodes(htmlSubDub, urlSubDub, poster)
+                    subEpisodes.getEpisodes(htmlSubDub, urlSubDub)
                     if (subEpisodes.isNotEmpty()) {
                         title = title.replace("VOSTFR", "").replace("VF", "")
                     }
 
                 }
                 if (it == "DUB") {
-                    dubEpisodes.getEpisodes(html, url, poster)
+                    dubEpisodes.getEpisodes(html, url)
                     if (dubEpisodes.isEmpty()) status = true
                 }
             }
 
         }
 
-
-        //episodes.apmap { episode -> episode.posterUrl = episode.data.findPosterfromEmbedUrl() }
-
+               listOf(dubEpisodes, subEpisodes).apmap {
+                   it.apmap { episode ->
+                       episode.posterUrl = poster//episode.data.findPosterfromEmbedUrl()
+                   }
+               }
 
         val recommendations = documentBack.select("div.synsaisons > li")
         val allresultshome: MutableList<SearchResponse> = mutableListOf()
@@ -545,13 +506,12 @@ class AnimeSamaProvider : MainAPI() {
             url,
             TvType.Anime,
         ) {
-            this.posterUrl = poster
+            posterUrl = poster
             this.plot = description
             this.recommendations = allresultshome
             if (subEpisodes.isNotEmpty()) addEpisodes(DubStatus.Subbed, subEpisodes)
             if (dubEpisodes.isNotEmpty()) addEpisodes(DubStatus.Dubbed, dubEpisodes)
             this.comingSoon = status
-
         }
 
     }
@@ -788,11 +748,11 @@ class AnimeSamaProvider : MainAPI() {
             categoryName.contains("NOUVEAUX") -> document.select(cssSelectorN)
                 .mapNotNull { article -> article.toSearchResponseNewEp() }
             categoryName.contains("ajoutés") -> document.select(cssSelector)[2].select("figure")
-                .apmap { article -> article.toSearchResponse() }.mapNotNull { it -> it }
+                .mapNotNull { article -> article.toSearchResponse() }
             categoryName.contains("rater") -> document.select(cssSelector)[1].select("figure")
-                .apmap { article -> article.toSearchResponse() }.mapNotNull { it -> it }
+                .mapNotNull { article -> article.toSearchResponse() }
             else -> document.select(cssSelector)[0].select("figure")
-                .apmap { article -> article.toSearchResponse() }.mapNotNull { it -> it }
+                .mapNotNull { article -> article.toSearchResponse() }
         }
         if (categoryName.contains("NOUVEAUX")) {
             categoryName = document.select("div#$idDay.fadeJours > div.col-12>p.titreJours").text()
