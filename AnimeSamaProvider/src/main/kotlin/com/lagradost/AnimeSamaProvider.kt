@@ -360,20 +360,20 @@ class AnimeSamaProvider : MainAPI() {
         )
         var concatAll = ""
         resultsAllContent.forEach {
-            concatAll =
-                concatAll + it.groupValues[0].replace(
-                    """[\s]*\/\/[\s]*[^\,]+[\s]*\n""".toRegex(),
-                    ""
-                )
-                    .replace("\n", "").replace("\t", "")
+            concatAll += it.groupValues[0].replace(
+                """[\s]*\/\/[\s]*[^\,]+[\s]*\n""".toRegex(),
+                ""
+            )
+                .replace("\n", "").replace("\t", "").replace("""[\s]*""".toRegex(), "")
         }
         concatAll = concatAll.replace("][", "*").replace("[", "*")
 
         var sumlink = ""
         while (concatAll.contains("*'")) {
-            Regex("""\*'[^']*',""").findAll(concatAll).forEach {
-                concatAll = concatAll.replace(it.groupValues[0], "*")
-                sumlink = sumlink + it.groupValues[0]
+            Regex("""\*'[^']*'""").findAll(concatAll).forEach {
+                concatAll =
+                    concatAll.replace("${it.groupValues[0]},", "*").replace(it.groupValues[0], "*")
+                sumlink += it.groupValues[0]
             }
             dataLoop = loopLookingforEpisodeTitle(dataLoop, dataset)
             if (dataLoop.results.epNo == 358) {
@@ -435,10 +435,17 @@ class AnimeSamaProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
+        var targetUrl = url
+        if (url.contains("*")) {
+            val (link, _) = app.get(url.replace("*", "")).document.select("div.synsaisons > li")
+                .tryTofindLatestSeason()
+            targetUrl = link.toString()
+
+        }
         val subEpisodes = ArrayList<Episode>()
         val dubEpisodes = ArrayList<Episode>()
 
-        val html = app.get(url)
+        val html = app.get(targetUrl)
         val document = html.document
         val textLinkBack = document.select("p.soustitreaccueil.syntitreanime").attr("onclick")
             ?: throw ErrorLoadingException()
@@ -450,16 +457,16 @@ class AnimeSamaProvider : MainAPI() {
         val poster = documentBack.select("img.d-block.w-100")[0].attr("src")
         var title = document.select("p.soustitreaccueil.syntitreanime").text()
         var status = false
-        val urlSubDub = findlinkforSuborDub(htmlBack, url)
+        val urlSubDub = findlinkforSuborDub(htmlBack, targetUrl)
         var htmlSubDub: NiceResponse? = null
-        if (urlSubDub != url) {
+        if (urlSubDub != targetUrl) {
             htmlSubDub = app.get(urlSubDub)
         }
         if (title.lowercase().contains("vostfr")) {
 
             listOf("SUB", "DUB").apmap {
                 if (it == "SUB") {
-                    subEpisodes.getEpisodes(html, url)
+                    subEpisodes.getEpisodes(html, targetUrl)
                     if (subEpisodes.isEmpty()) status = true
                 }
                 if (it == "DUB" && htmlSubDub != null) {
@@ -479,7 +486,7 @@ class AnimeSamaProvider : MainAPI() {
 
                 }
                 if (it == "DUB") {
-                    dubEpisodes.getEpisodes(html, url)
+                    dubEpisodes.getEpisodes(html, targetUrl)
                     if (dubEpisodes.isEmpty()) status = true
                 }
             }
@@ -498,7 +505,7 @@ class AnimeSamaProvider : MainAPI() {
             val link_on_click = saga.attr("onclick")
             val link = regexGetlink.find(link_on_click)?.groupValues?.get(1)
                 ?: throw ErrorLoadingException()
-            if (!(dropSlachChar(link) == dropSlachChar(url) || dropSlachChar(link) == dropSlachChar(
+            if (!(dropSlachChar(link) == dropSlachChar(targetUrl) || dropSlachChar(link) == dropSlachChar(
                     urlSubDub
                 ))
             ) {
@@ -508,7 +515,7 @@ class AnimeSamaProvider : MainAPI() {
 
         return newAnimeLoadResponse(
             title,
-            url,
+            targetUrl,
             TvType.Anime,
         ) {
             posterUrl = poster
@@ -584,7 +591,7 @@ class AnimeSamaProvider : MainAPI() {
             if (detect_anime_Vostfr) {
                 isVostfr = true
 
-                findAllNumber.findAll(text).forEach { number ->
+                findAllNumber.findAll(text).toList().apmap { number ->
                     newSumVost += number.groupValues[1].toInt()
 
                 }
@@ -596,7 +603,7 @@ class AnimeSamaProvider : MainAPI() {
                 }
             } else if (!isVostfr && detect_anime_fr) {
                 isFR = true
-                findAllNumber.findAll(text).forEach { number ->
+                findAllNumber.findAll(text).toList().apmap { number ->
                     newSum += number.groupValues[1].toInt()
                 }
                 if (newSum >= sum) {
@@ -606,7 +613,7 @@ class AnimeSamaProvider : MainAPI() {
                     dubStatus = "fr"
                 }
             } else if (!isVostfr && !isFR) {
-                findAllNumber.findAll(text).forEach { number ->
+                findAllNumber.findAll(text).toList().apmap { number ->
                     newSumMovie += number.groupValues[1].toInt()
                 }
                 if (newSumMovie >= sumMovie) {
@@ -626,43 +633,42 @@ class AnimeSamaProvider : MainAPI() {
     }
 
     val findAllNumber = Regex("""([0-9]+)""")
-    private suspend fun MutableList<SearchResponse>.toSearchResponse(element: Element): Boolean {
-        val figcaption = element.select("a >figcaption > span").text()
+    private fun Element.toSearchResponse(): SearchResponse? {
+        val figcaption = select("a >figcaption > span").text()
         if (figcaption.lowercase().trim() != "scan") {
-            val posterUrl = element.select("a > img").attr("src")
+            val posterUrl = select("a > img").attr("src")
             //val type = figcaption.lowercase()
 
-            val title = element.select("a >figcaption").text().replace(figcaption, "")
-            val global_link = element.select("a").attr("href")
+            val title = select("a >figcaption").text().replace(figcaption, "")
+            val global_link = select("a").attr("href")
             if (global_link.contains("search.php")) {
-                return false
-            }
-            val document = app.get(global_link).document
-            val (link, dub) = document.select("div.synsaisons > li").tryTofindLatestSeason()
-            val dubstatus = if (dub.toString().lowercase().contains("vostfr")) {
-                EnumSet.of(DubStatus.Subbed)
-            } else {
-                EnumSet.of(DubStatus.Dubbed)
-            }
-            val type = dub.toString()
-            var tv_type = TvType.Anime
-
-            if (type.contains("film")) {
-                tv_type = TvType.AnimeMovie
+                return null
             }
 
-            this.add(newAnimeSearchResponse(
+
+            /* val dubstatus = if (dub.toString().lowercase().contains("vostfr")) {
+                 EnumSet.of(DubStatus.Subbed)
+             } else {
+                 EnumSet.of(DubStatus.Dubbed)
+             }*/
+            //val type = dub.toString()
+            val tv_type = TvType.TvSeries
+
+            /*  if (type.contains("film")) {
+                  tv_type = TvType.AnimeMovie
+              }*/
+
+            return newAnimeSearchResponse(
                 title,
-                link.toString(),
+                global_link + "*",
                 tv_type,
                 false,
             ) {
                 this.posterUrl = posterUrl
-                this.dubStatus = dubstatus
-            })
-            return true
+                // this.dubStatus = dubstatus
+            }
         } else {
-            return false
+            return null
         }
     }
 
@@ -742,32 +748,35 @@ class AnimeSamaProvider : MainAPI() {
             }
             else -> "0"
         }
-        val home: MutableList<SearchResponse> = mutableListOf()
+        var home: List<SearchResponse> = mutableListOf()
 
         if (page <= 1) {
             val document = app.get(url).document
             cssSelector = "div.container-fluid>div#sectionsAccueil"
             cssSelectorN = "div#$idDay>div#sectionsAccueil > figure"
-            when (!categoryName.isBlank()) {
+            val currentTimestamp = System.currentTimeMillis()
+            home = when (!categoryName.isBlank()) {
                 categoryName.contains("NOUVEAUX") -> {
                     categoryName =
                         document.select("div#$idDay.fadeJours > div.col-12>p.titreJours").text()
-                    return newHomePageResponse(categoryName, document.select(cssSelectorN)
-                        .mapNotNull { article -> article.toSearchResponseNewEp()})
+                    document.select(cssSelectorN)
+                        .mapNotNull { article -> article.toSearchResponseNewEp() }
                 }
                 categoryName.contains("ajoutés") -> {
                     document.select(cssSelector)[2].select("figure")
-                        .apmap { article -> home.toSearchResponse(article) }
+                        .mapNotNull { article -> article.toSearchResponse() }
                 }
                 categoryName.contains("rater") -> {
                     document.select(cssSelector)[1].select("figure")
-                        .apmap { article -> home.toSearchResponse(article) }
+                        .mapNotNull { article -> article.toSearchResponse() }
                 }
                 else -> {
                     document.select(cssSelector)[0].select("figure")
-                        .apmap { article -> home.toSearchResponse(article) }
+                        .mapNotNull { article -> article.toSearchResponse() }
                 }
             }
+            val rest = System.currentTimeMillis() - currentTimestamp
+            println("OTIME $rest")
         }
         return newHomePageResponse(categoryName, home)
     }
