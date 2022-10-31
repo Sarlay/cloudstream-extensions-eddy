@@ -660,10 +660,10 @@ class AnimeSamaProvider : MainAPI() {
                 this.posterUrl = posterUrl
                 this.dubStatus = dubstatus
             })
-
+            return true
+        } else {
+            return false
         }
-        return true
-
     }
 
     private fun Element.toSearchResponseNewEp(): SearchResponse? {
@@ -712,8 +712,8 @@ class AnimeSamaProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         var categoryName = request.name
 
-        var cssSelector = ""
-        var cssSelectorN = ""
+        val cssSelector: String
+        val cssSelectorN: String
 
         val url = request.data
         val cal = Calendar.getInstance()
@@ -742,28 +742,33 @@ class AnimeSamaProvider : MainAPI() {
             }
             else -> "0"
         }
-        if (page <= 1) {
-            cssSelector = "div.container-fluid>div#sectionsAccueil"
-            cssSelectorN = "div#$idDay>div#sectionsAccueil > figure"
-        }
-        val document = app.get(url).document
         val home: MutableList<SearchResponse> = mutableListOf()
 
-        when (!categoryName.isBlank()) {
-            categoryName.contains("NOUVEAUX") -> {
-                categoryName =
-                    document.select("div#$idDay.fadeJours > div.col-12>p.titreJours").text()
-                return newHomePageResponse(categoryName, document.select(cssSelectorN)
-                    .mapNotNull { article -> article.toSearchResponseNewEp() })
+        if (page <= 1) {
+            val document = app.get(url).document
+            cssSelector = "div.container-fluid>div#sectionsAccueil"
+            cssSelectorN = "div#$idDay>div#sectionsAccueil > figure"
+            when (!categoryName.isBlank()) {
+                categoryName.contains("NOUVEAUX") -> {
+                    categoryName =
+                        document.select("div#$idDay.fadeJours > div.col-12>p.titreJours").text()
+                    return newHomePageResponse(categoryName, document.select(cssSelectorN)
+                        .mapNotNull { article -> article.toSearchResponseNewEp()})
+                }
+                categoryName.contains("ajoutés") -> {
+                    document.select(cssSelector)[2].select("figure")
+                        .apmap { article -> home.toSearchResponse(article) }
+                }
+                categoryName.contains("rater") -> {
+                    document.select(cssSelector)[1].select("figure")
+                        .apmap { article -> home.toSearchResponse(article) }
+                }
+                else -> {
+                    document.select(cssSelector)[0].select("figure")
+                        .apmap { article -> home.toSearchResponse(article) }
+                }
             }
-            categoryName.contains("ajoutés") -> document.select(cssSelector)[2].select("figure")
-                .apmap { article -> home.toSearchResponse(article) }
-            categoryName.contains("rater") -> document.select(cssSelector)[1].select("figure")
-                .apmap { article -> home.toSearchResponse(article) }
-            else -> document.select(cssSelector)[0].select("figure")
-                .apmap { article -> home.toSearchResponse(article) }
         }
-
         return newHomePageResponse(categoryName, home)
     }
 }
