@@ -637,35 +637,21 @@ class AnimeSamaProvider : MainAPI() {
         val figcaption = select("a >figcaption > span").text()
         if (figcaption.lowercase().trim() != "scan") {
             val posterUrl = select("a > img").attr("src")
-            //val type = figcaption.lowercase()
-
             val title = select("a >figcaption").text().replace(figcaption, "")
             val global_link = select("a").attr("href")
             if (global_link.contains("search.php")) {
                 return null
             }
-
-
-            /* val dubstatus = if (dub.toString().lowercase().contains("vostfr")) {
-                 EnumSet.of(DubStatus.Subbed)
-             } else {
-                 EnumSet.of(DubStatus.Dubbed)
-             }*/
-            //val type = dub.toString()
+            
             val tv_type = TvType.TvSeries
-
-            /*  if (type.contains("film")) {
-                  tv_type = TvType.AnimeMovie
-              }*/
-
+            
             return newAnimeSearchResponse(
                 title,
-                global_link + "*",
+                "$global_link*",
                 tv_type,
                 false,
             ) {
                 this.posterUrl = posterUrl
-                // this.dubStatus = dubstatus
             }
         } else {
             return null
@@ -754,7 +740,6 @@ class AnimeSamaProvider : MainAPI() {
             val document = app.get(url).document
             cssSelector = "div.container-fluid>div#sectionsAccueil"
             cssSelectorN = "div#$idDay>div#sectionsAccueil > figure"
-            val currentTimestamp = System.currentTimeMillis()
             home = when (!categoryName.isBlank()) {
                 categoryName.contains("NOUVEAUX") -> {
                     categoryName =
@@ -775,8 +760,6 @@ class AnimeSamaProvider : MainAPI() {
                         .mapNotNull { article -> article.toSearchResponse() }
                 }
             }
-            val rest = System.currentTimeMillis() - currentTimestamp
-            println("OTIME $rest")
         }
         return newHomePageResponse(categoryName, home)
     }
