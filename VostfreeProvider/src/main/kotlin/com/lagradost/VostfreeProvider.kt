@@ -96,6 +96,11 @@ class VostfreeProvider : MainAPI() {
         @JsonProperty("episodeNumber") val episodeNumber: String,
     )
 
+    fun ArrayList<Episode>.sortBySeasonNumber(): ArrayList<Episode> {
+        return ArrayList(this.sortedBy {
+            it.season
+        })
+    }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document // récupere le texte sur la page (requète http)
@@ -199,7 +204,7 @@ class VostfreeProvider : MainAPI() {
                 this.year = year
                 addEpisodes(
                     if (title.contains("VF")) DubStatus.Dubbed else DubStatus.Subbed,
-                    episodes
+                    episodes.sortBySeasonNumber()
                 )
                 this.recommendations = document.select("ul.content > li").mapNotNull { article ->
                     article.toSearchResponse()
@@ -376,6 +381,4 @@ class VostfreeProvider : MainAPI() {
             }
         return newHomePageResponse(request.name, home)
     }
-
-
 }
