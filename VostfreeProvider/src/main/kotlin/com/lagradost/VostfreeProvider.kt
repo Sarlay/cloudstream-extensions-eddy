@@ -115,7 +115,7 @@ class VostfreeProvider : MainAPI() {
             meta?.select(" div.slide-poster > img")
                 ?.attr("src")!!
         )// récupere le texte de l'attribut 'data-src'
-        var year = document.select("div.slide-info > p > b > a")?.text()?.toInt()
+        val year = document.select("div.slide-info > p > b > a").text().toIntOrNull()
 
         urlSaison.add(url)
 
@@ -138,9 +138,9 @@ class VostfreeProvider : MainAPI() {
             var indication: String? = null
 
             if (!seasontext.isNullOrBlank() && !seasontext.contains("""([a-zA-Z])""".toRegex())) {
-                seasonNumber = seasontext.toInt()
+                seasonNumber = seasontext.toIntOrNull()
 
-                if (seasonNumber!! < 1) { // seem a an OVA has 0 as season number
+                if (seasonNumber!! < 1 || seasonNumber == null) { // seem a an OVA has 0 as season number
                     seasonNumber = 1000
                     indication = "Vous regardez un OVA"
                 }
@@ -159,7 +159,7 @@ class VostfreeProvider : MainAPI() {
                     episodes.add(
                         Episode(
                             link,
-                            episode = typeOftheAnime.replace("Episode ", "").toInt(),
+                            episode = typeOftheAnime.replace("Episode ", "").toIntOrNull(),
                             season = seasonNumber,
                             name = typeOftheAnime,
                             description = indication,
@@ -183,6 +183,9 @@ class VostfreeProvider : MainAPI() {
                 this.posterUrl = poster
                 this.plot = description
                 this.year = year
+                this.recommendations = document.select("ul.content > li").mapNotNull { article ->
+                    article.toSearchResponse()
+                }
             }
         } else  // an anime
         {
@@ -198,6 +201,9 @@ class VostfreeProvider : MainAPI() {
                     if (title.contains("VF")) DubStatus.Dubbed else DubStatus.Subbed,
                     episodes
                 )
+                this.recommendations = document.select("ul.content > li").mapNotNull { article ->
+                    article.toSearchResponse()
+                }
 
             }
         }
@@ -216,21 +222,25 @@ class VostfreeProvider : MainAPI() {
 
         val noMovie = "1"
         val numeroEpisode = parsedInfo?.episodeNumber
-            ?: noMovie  // if is not a movie then take the episode number else for movie it is 1
+            ?: noMovie   // if is not a movie then take the episode number else for movie it is 1
 
         val document = app.get(url).document
+        // supprimer les zéro de 0015 pour obtenir l'episode 15
+        var index = numeroEpisode.indexOf('0')
+        var numero = numeroEpisode
+        while (index == 0) {
+            numero = numeroEpisode.drop(1)
+            index = numero.indexOf('0')
+        }
+        if (!numero.contains("""\d+""".toRegex())) {
+            numero = noMovie
+        }
+
+        val cssQuery = " div#buttons_$numero" // numero  épisode
         document.select("div.new_player_bottom")
             .forEach { player_bottom -> // séléctione tous les players
 
-                // supprimer les zéro de 0015 pour obtenir l'episode 15
-                var index = numeroEpisode.indexOf('0')
-                var numero = numeroEpisode
-                while (index == 0) {
-                    numero = numeroEpisode.drop(1)
-                    index = numero.indexOf('0')
-                }
 
-                val cssQuery = " div#buttons_$numero" // numero  épisode
                 val buttonsNepisode = player_bottom?.select(cssQuery)
                     ?: throw ErrorLoadingException("Non player")  //séléctione tous les players pour l'episode NoEpisode
                 buttonsNepisode.select("> div").apmap {
@@ -241,7 +251,7 @@ class VostfreeProvider : MainAPI() {
                     val codePlayload =
                         document.selectFirst("div#content_$player")?.text()
                             .toString() // result : "325544" ou "https:..."
-                    var playerUrl = when (playerName) {
+                    val playerUrl = when (playerName) {
                         "VIP", "Upvid", "Dstream", "Streamsb", "Vudeo", "NinjaS", "Upstream" -> codePlayload // case https
                         "Uqload" -> "https://uqload.com/embed-$codePlayload.html"
                         "Mytv" -> "https://www.myvi.tv/embed/$codePlayload"
@@ -280,42 +290,36 @@ class VostfreeProvider : MainAPI() {
     private fun Element.toSearchResponse(): SearchResponse {
         val poster = select("span.image")
         val posterUrl = fixUrl(poster.select("> img").attr("src"))
-        val subdub = select("div.quality").text()
         val genre = select("div.genre").text()
-        val title = select("div.info > div.title").text()
+        val title = if (select("div.info > div.title").text().isNotBlank()) {
+            select("div.info > div.title").text()
+        } else {
+            select("div.play > a").attr("title")
+        }
         val link = select("div.play > a").attr("href")
-        if (genre.uppercase().contains( "FILM") ){
-            return newAnimeSearchResponse(
-                title,
-                link,
-                TvType.AnimeMovie,
-                false,
-            ) {
-                this.posterUrl = posterUrl
-                this.dubStatus =
-                    if (subdub == "VF") EnumSet.of(DubStatus.Dubbed) else EnumSet.of(DubStatus.Subbed)
 
-            }
+        return newAnimeSearchResponse(
+            title,
+            link,
+            if (genre.uppercase().contains("FILM")) {
+                TvType.AnimeMovie
+            } else {
+                TvType.Anime
+            },
+            false,
+        ) {
+            this.posterUrl = posterUrl
 
-        } else  // an Anime
-        {
-            return newAnimeSearchResponse(
-                title,
-                link,
-                TvType.Anime,
-                false,
-            ) {
-                this.posterUrl = posterUrl
-                this.dubStatus =
-                    if (subdub == "VF") EnumSet.of(DubStatus.Dubbed) else EnumSet.of(DubStatus.Subbed)
-            }
+            addDubStatus(
+                isDub = select("div.quality").text().uppercase() == "VF",
+                episodes = select("div.year > b").text().toIntOrNull()
+            )
         }
     }
 
     private fun Element.toSearchResponse1(): SearchResponse {
         val poster = select("span.image")
         val posterUrl = fixUrl(poster.select("> img").attr("src"))
-        val subdub = select("div.quality").text()
         //val genre = select("div.info > ul.additional > li").text()
         val title = select("div.info > div.title").text()
         val link = select(" div.info > div.title > a").attr("href")
@@ -327,8 +331,11 @@ class VostfreeProvider : MainAPI() {
             false,
         ) {
             this.posterUrl = posterUrl
-            this.dubStatus =
-                if (subdub == "VF") EnumSet.of(DubStatus.Dubbed) else EnumSet.of(DubStatus.Subbed)
+
+            addDubStatus(
+                isDub = select("div.quality").text().uppercase() == "VF",
+                episodes = select("div.year > b").text().toIntOrNull()
+            )
         }
 
     }
@@ -358,7 +365,7 @@ class VostfreeProvider : MainAPI() {
         val document = app.get(url).document
 
         val home =
-            when (!categoryName.isNullOrBlank()) {
+            when (!categoryName.isBlank()) {
                 request.name.contains("Nouveaux") -> document.select("div#content > div.last-episode")
                     .mapNotNull { article -> article.toSearchResponse1() }
                 else ->
