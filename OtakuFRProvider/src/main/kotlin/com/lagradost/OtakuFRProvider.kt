@@ -68,9 +68,8 @@ class OtakuFRProvider : MainAPI() {
         val episodes = episode.map { infoEpisode ->
             val remove = infoEpisode.select("span").text().toString()
             val title = infoEpisode.text().replace(remove, "")
-            val textEpisode =
-                Regex(""".* (\d*) [VvfF]{1,1}""")
-            val episodeNum = textEpisode.find(title)?.groupValues?.get(1)?.toInt()
+            val episodeNum =
+                Regex(""".* (\d*) [VvfF]{1,1}""").find(title)?.groupValues?.get(1)?.toIntOrNull()
             link_video = infoEpisode.attr("href")
             val link_poster = poster
             dataUrl = link_video
@@ -89,14 +88,14 @@ class OtakuFRProvider : MainAPI() {
         val infosList = infotext?.let { infosListRegex.find(it)?.groupValues?.get(1) }
         val isinfosList = !infosList.isNullOrBlank()
         if (isinfosList) {
-            if (infosList!!.contains("ilm")) mediaType = TvType.AnimeMovie
+            if (infosList!!.uppercase().contains("FILM")) mediaType = TvType.AnimeMovie
         }
 
         val description =
             document.selectFirst("div.synop")?.text()?.split("Autre Nom")?.get(0).toString()
         val textInfo = document.select("ul.list-unstyled").text()
-        val regexYear = Regex("""Sortie initiale[\:] (\d*)""")
-        val year = regexYear.find(textInfo)?.groupValues?.get(1)?.toInt()
+        val year = Regex("""Sortie initiale[\:] (\d*)""").find(textInfo)?.groupValues?.get(1)
+            ?.toIntOrNull()
 
         if (mediaType == TvType.AnimeMovie) {
             return newMovieLoadResponse(
@@ -142,19 +141,17 @@ class OtakuFRProvider : MainAPI() {
         val headers = mapOf(
             "X-Requested-With" to "XMLHttpRequest"
         )
-        var regexurlEmbed = Regex("""data-url='(.*)' d""")
         allLinkstoembed.apmap { player ->
-            var link = fixUrl(player.select("iframe").attr("src"))
-            var playerUrl = fixUrl(
-                regexurlEmbed.find(
+            val playerUrl = fixUrl(
+                Regex("""data-url='(.*)' d""").find(
                     app.get(
-                        link,
+                        fixUrl(player.select("iframe").attr("src")),
                         headers = headers
                     ).text
                 )?.groupValues?.get(1).toString()
             )
 
-            if (!playerUrl.isNullOrBlank())
+            if (!playerUrl.isBlank())
                 loadExtractor(
                     httpsify(playerUrl),
                     playerUrl,
@@ -180,10 +177,10 @@ class OtakuFRProvider : MainAPI() {
 
     private fun Element.toSearchResponse(): SearchResponse {
         val figure = select("div >div >figure")
-        var posterUrl = figure.select(" a > img").attr("src")
+        val posterUrl = figure.select(" a > img").attr("src")
         val title = select(" div >div > div > a").text()
         val link = figure.select("a").attr("href")
-        var dubstatus = if (title.contains("VF")) {
+        val dubstatus = if (title.contains("VF")) {
             EnumSet.of(DubStatus.Dubbed)
         } else {
             EnumSet.of(DubStatus.Subbed)
@@ -206,12 +203,6 @@ class OtakuFRProvider : MainAPI() {
         val posterUrl = figure.select("a > img").attr("src")
         val title = select(" div > a").text()
         val url = select(" div > a").attr("href")
-        val dubstatus = if (title.contains("VF")) {
-            EnumSet.of(DubStatus.Dubbed)
-        } else {
-            EnumSet.of(DubStatus.Subbed)
-        }
-
         return newAnimeSearchResponse(
             title,
             url + "*",
@@ -219,7 +210,11 @@ class OtakuFRProvider : MainAPI() {
             false,
         ) {
             this.posterUrl = posterUrl
-            this.dubStatus = dubstatus
+            addDubStatus(
+                isDub = title.contains("VF"),
+                episodes = Regex(""".* (\d*) [VvfF]{1,1}""").find(title)?.groupValues?.get(1)
+                    ?.toIntOrNull()
+            )
         }
 
     }
