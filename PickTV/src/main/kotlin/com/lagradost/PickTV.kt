@@ -95,8 +95,7 @@ class PickTV : MainAPI() {
         var posterUrl = ""
         var posterurlRec: String?
         var flag = ""
-        val reponse = app.get(urlmain).text
-        val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
+        val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(app.get(urlmain).text)!!
         for (media in arraymediaPlaylist) {
             if (url == media.url) {
                 link = media.url
@@ -172,25 +171,19 @@ class PickTV : MainAPI() {
         val nameURLserver =
             "\uD83D\uDCF6" + link.replace("http://", "").replace("https://", "").take(8)
 
-        if (allresultshome.size >= 1) {
-            val recommendation = allresultshome.sortBynameNumber()
-            return LiveStreamLoadResponse(
-                name = "$title $flag $nameURLserver",
-                url = link,
-                apiName = this.name,
-                dataUrl = link,
-                posterUrl = posterUrl,
-                recommendations = recommendation
-            )
+        val recommendation = if (allresultshome.isNotEmpty()) {
+            allresultshome.sortBynameNumber()
         } else {
-            return LiveStreamLoadResponse(
-                name = "$title $flag $nameURLserver",
-                url = link,
-                apiName = this.name,
-                dataUrl = link,
-                posterUrl = posterUrl,
-            )
+            null
         }
+        return LiveStreamLoadResponse(
+            name = "$title $flag $nameURLserver",
+            url = link,
+            apiName = this.name,
+            dataUrl = link,
+            posterUrl = posterUrl,
+            recommendations = recommendation
+        )
     }
 
 
@@ -270,7 +263,6 @@ class PickTV : MainAPI() {
                 invokeHeader = mapOf(
                     "Accept" to "*/*",
                     "Accept-Language" to "en_US",
-                    //"User-Agent" to "f0dcVFZhbxFZRUk",
                     "Range" to "bytes=0-"
                 )
 
@@ -398,15 +390,13 @@ class PickTV : MainAPI() {
     val rgxSelectFirstWord = Regex("""(^[^\s]*)""")
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val arrayHomepage = arrayListOf<HomePageList>()
-        val reponse = app.get(urlmain).text
-        val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(reponse)!!
+        val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(app.get(urlmain).text)!!
         val genreMedia = ArrayList<String>()
         var newGenre: String
         var category: String
         var newgenreMedia: Boolean
         var posterUrl: String?
         ///////////////////////
-        val sortedarraymediaPlaylist = arraymediaPlaylist.sortByTitleNumber()
         arraymediaPlaylist.forEach { mediaGenre ->
             newGenre = cleanTitle(mediaGenre.genre.toString())//
 
@@ -425,7 +415,7 @@ class PickTV : MainAPI() {
                 var b_new: String
                 var newgroupMedia: Boolean
                 var mediaGenre: String
-                val home = sortedarraymediaPlaylist.mapNotNull { media ->
+                val home = arraymediaPlaylist.sortByTitleNumber().mapNotNull { media ->
 
                     val b = cleanTitle(media.title)//
                     b_new = rgxSelectFirstWord.find(b)!!.groupValues[0]  //b.take(takeN)
@@ -493,4 +483,5 @@ class PickTV : MainAPI() {
             .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
     }
 }
+
 
