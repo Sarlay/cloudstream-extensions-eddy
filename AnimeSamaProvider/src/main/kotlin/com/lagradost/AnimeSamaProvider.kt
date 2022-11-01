@@ -373,12 +373,10 @@ class AnimeSamaProvider : MainAPI() {
             Regex("""\*'[^']*'""").findAll(concatAll).forEach {
                 concatAll =
                     concatAll.replace("${it.groupValues[0]},", "*").replace(it.groupValues[0], "*")
-                sumlink += it.groupValues[0]
+                sumlink += it.groupValues[0] + ","
             }
             dataLoop = loopLookingforEpisodeTitle(dataLoop, dataset)
-            if (dataLoop.results.epNo == 358) {
-                println("")
-            }
+
             this.add(
                 Episode(
                     data = sumlink,
@@ -642,9 +640,9 @@ class AnimeSamaProvider : MainAPI() {
             if (global_link.contains("search.php")) {
                 return null
             }
-            
+
             val tv_type = TvType.TvSeries
-            
+
             return newAnimeSearchResponse(
                 title,
                 "$global_link*",
