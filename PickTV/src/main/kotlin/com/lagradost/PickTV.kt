@@ -7,7 +7,6 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.runBlocking
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import okhttp3.Interceptor
-import kotlin.collections.ArrayList
 
 class PickTV : MainAPI() {
     override var mainUrl = "http"
@@ -257,23 +256,13 @@ class PickTV : MainAPI() {
         var isM3u = false
         var link: String = data
         var invokeHeader = mapOf<String, String>()
+        var refer: String = ""
         when (true) {
-            data.contains("/greentv/") -> {
-                isM3u = false
-                invokeHeader = mapOf(
-                    "Accept" to "*/*",
-                    "Accept-Language" to "en_US",
-                    "Range" to "bytes=0-"
-                )
+            (data.contains("m3u") && data.contains("webudi.openhd")) -> {
+                isM3u = true
+                refer = "https://streamservicehd.click/"
+            }
 
-            }
-            data.contains("vavoo_auth") -> {
-                invokeHeader = mapOf(
-                    "User-Agent" to "VAVOO/2.6 (Linux; Android 7.1.2; SM-G988N Build/NRD90M) Kodi_Fork_VAVOO/1.0 Android/7.1.2 Sys_CPU/armv7l App_Bitness/32 Version/2.6",
-                    "Accept" to "*/*",
-                    "Accept-Charset" to "UTF-8,*;q=0.8"
-                )
-            }
             data.contains("dreamsat.ddns") -> {
                 val headers1 = mapOf(
                     "User-Agent" to "REDLINECLIENT_DREAMSAT_650HD_PRO_RICHTV_V02",
@@ -290,9 +279,13 @@ class PickTV : MainAPI() {
                 if (redirectlink != "null") {
                     link = redirectlink
                 }
+                refer = "${rgxGetUrlRef.find(link)?.groupValues?.get(0).toString()}/"
+
             }
             else -> {
                 link = data
+                refer = "${rgxGetUrlRef.find(link)?.groupValues?.get(0).toString()}/"
+
             }
         }
 
@@ -303,7 +296,7 @@ class PickTV : MainAPI() {
                 name,
                 live,
                 link,
-                "${rgxGetUrlRef.find(link)?.groupValues?.get(0).toString()}/",
+                refer,
                 Qualities.Unknown.value,
                 isM3u8 = isM3u,
                 headers = invokeHeader,
@@ -483,5 +476,4 @@ class PickTV : MainAPI() {
             .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
     }
 }
-
 
