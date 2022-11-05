@@ -11,8 +11,8 @@ class TagsMacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
     override val name = "Tags"
     override val idPrefix = "tagsiptvbox"
     override val icon = R.drawable.ic_baseline_extension_24
-    override val requiresUsername = true
-    override val requiresPassword = true
+    override val requiresUsername = false
+    override val requiresPassword = false
     override val requiresServer = true
     override val createAccountUrl = ""
 
@@ -33,7 +33,7 @@ class TagsMacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
     }
 
     override suspend fun login(data: InAppAuthAPI.LoginData): Boolean {
-        if (data.server.isNullOrBlank() && data.username.isNullOrBlank() && data.password.isNullOrBlank()) return false // we require a server
+        if (data.server.isNullOrBlank()) return false // we require a tags
         switchToNewAccount()
         setKey(accountId, IPTVBOX_USER_KEY1, data)
         registerAccount()
@@ -53,12 +53,7 @@ class TagsMacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
             MacIPTVProvider.tags = ""
             return
         }
-        MacIPTVProvider.tags = ""
-        listOf(data.server, data.password, data.username).forEach {
-            if (!it.isNullOrBlank() && it.trim() != "") {
-                MacIPTVProvider.tags = "$it|" + MacIPTVProvider.tags
-            }
-        }
+        MacIPTVProvider.tags = data.server.toString()
     }
 
     override suspend fun initialize() {
