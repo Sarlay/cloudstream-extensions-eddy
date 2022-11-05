@@ -1,6 +1,7 @@
 package com.lagradost
 
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.AppUtils
@@ -27,7 +28,7 @@ class FrenchStreamProvider : MainAPI() {
                 if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("french-stream")) {
                     mainUrl = newMainUrl
                 } else {
-                    AppUtils.tryParseJson<ArrayList<WiflixProvider.mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
+                    AppUtils.tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
                         .forEach {
                             if (it.title.lowercase().contains("french-stream")) {
                                 mainUrl = it.url
@@ -299,6 +300,11 @@ class FrenchStreamProvider : MainAPI() {
 
         }
     }
+
+    data class mediaData(
+        @JsonProperty("title") var title: String,
+        @JsonProperty("url") val url: String,
+    )
 
     override val mainPage = mainPageOf(
         Pair("$mainUrl/xfsearch/version-film/page/", "Derniers films"),
