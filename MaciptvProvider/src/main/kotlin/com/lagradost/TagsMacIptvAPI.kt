@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.syncproviders.InAppAuthAPI
 import com.lagradost.cloudstream3.syncproviders.InAppAuthAPIManager
 
 class TagsMacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
-    override val name = "Vos Tags"
+    override val name = "Tags"
     override val idPrefix = "tagsiptvbox"
     override val icon = R.drawable.ic_baseline_extension_24
     override val requiresUsername = true
@@ -50,7 +50,12 @@ class TagsMacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
             MacIPTVProvider.tags = ""
             return
         }
-        MacIPTVProvider.tags = "${data.server.toString()}|${data.password}|${data.username}"
+        MacIPTVProvider.tags = ""
+        listOf(data.server, data.password, data.username).forEach {
+            if (!it.isNullOrBlank()) {
+                MacIPTVProvider.tags = "$it|" + MacIPTVProvider.tags
+            }
+        }
     }
 
     override suspend fun initialize() {
