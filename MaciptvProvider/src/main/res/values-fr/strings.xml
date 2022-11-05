@@ -6,4 +6,6 @@
     <string name="nginx_url_pref">Addresse du serveur IPTV</string>
 	<string name="example_password">00:1A:79:XX:XX</string>
 	<string name="example_ip">http:\/\/exemple\-portal.com:8080\/c\/</string>
+	<string name="tags_info_title">Ajoutez d\'autres pays ou catégories</string>
+    <string name="tags_info_summary">Dans n\'importe quelle case, renseignez vos tags séparés par \| comme par exemple : Sport\|vip\|canada\|brasil </string>
 </resources>

@@ -13,6 +13,7 @@ import com.lagradost.cloudstream3.ui.settings.SettingsAccount
 @CloudstreamPlugin
 class MacIPTVProviderPlugin : Plugin() {
     val iptvboxApi = MacIptvAPI(0)
+	val tagsiptvboxApi = TagsMacIptvAPI(0)
 
     override fun load(context: Context) {
         // All providers should be added in this manner. Please don't edit the providers list directly.
@@ -22,6 +23,7 @@ class MacIPTVProviderPlugin : Plugin() {
 		registerMainAPI(MacIPTVProvider("ar"))
         ioSafe {
             iptvboxApi.initialize()
+			tagsiptvboxApi.initialize()
         }
     }
 
@@ -31,6 +33,8 @@ class MacIPTVProviderPlugin : Plugin() {
             if (activity != null) {
                 val frag = MacIptvSettingsFragment(this, iptvboxApi)
                 frag.show(activity.supportFragmentManager, iptvboxApi.name)
+                val frag2 = TagsIptvBoxSettingsFragments(this, tagsiptvboxApi)
+                frag2.show(activity.supportFragmentManager, tagsiptvboxApi.name)
             }
         }
     }
