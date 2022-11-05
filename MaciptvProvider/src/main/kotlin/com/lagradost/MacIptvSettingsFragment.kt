@@ -61,7 +61,7 @@ class MacIptvSettingsFragment(
         val infoView = view.findView<LinearLayout>("iptvbox_info")
         val infoTextView = view.findView<TextView>("info_main_text")
         val infoSubTextView = view.findView<TextView>("info_sub_text")
-        val infoImageView = view.findView<ImageView>("iptvbox_info_imageview")
+        //val infoImageView = view.findView<ImageView>("iptvbox_info_imageview")
 
         infoTextView.text = getString("iptvbox_info_title") ?: "MacIPTV"
         infoSubTextView.text = getString("iptvbox_info_summary") ?: ""
@@ -127,7 +127,7 @@ class MacIptvSettingsFragment(
         loginViewTags.setOnClickListener(object : View.OnClickListener {
             override fun onClick(v: View?) {
                 val info = tagsmaciptvAPI.loginInfo()
-                if (info != null) {
+                if (info?.accountIndex != null) {
                     showLoginInfo(activity, tagsmaciptvAPI, info)
                 } else {
                     addAccount(activity, tagsmaciptvAPI)
