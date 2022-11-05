@@ -1,6 +1,5 @@
 package com.lagradost
 
-import android.content.res.ColorStateList
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -15,7 +14,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.lagradost.cloudstream3.plugins.Plugin
 import com.lagradost.cloudstream3.ui.settings.SettingsAccount.Companion.showLoginInfo
 import com.lagradost.cloudstream3.ui.settings.SettingsAccount.Companion.addAccount
-import com.lagradost.cloudstream3.utils.UIHelper.colorFromAttribute
 
 
 class MacIptvSettingsFragment(
@@ -65,16 +63,16 @@ class MacIptvSettingsFragment(
 
         infoTextView.text = getString("iptvbox_info_title") ?: "MacIPTV"
         infoSubTextView.text = getString("iptvbox_info_summary") ?: ""
-        infoImageView.setImageDrawable(getDrawable("iptvbox_question"))
+      /*  infoImageView.setImageDrawable(getDrawable("iptvbox_question"))
         infoImageView.imageTintList =
-            ColorStateList.valueOf(view.context.colorFromAttribute(R.attr.white))
+            ColorStateList.valueOf(view.context.colorFromAttribute(R.attr.white))*/
 
         val loginView = view.findView<LinearLayout>("iptvbox_login")
         val loginTextView = view.findView<TextView>("main_text")
         val loginImageView = view.findView<ImageView>("iptvbox_login_imageview")
-        loginImageView.setImageDrawable(getDrawable("iptvbox"))
+      /*  loginImageView.setImageDrawable(getDrawable("iptvbox"))
         loginImageView.imageTintList =
-            ColorStateList.valueOf(view.context.colorFromAttribute(R.attr.white))
+            ColorStateList.valueOf(view.context.colorFromAttribute(R.attr.white))*/
 
         infoView.setOnClickListener(object : View.OnClickListener {
             override fun onClick(v: View?) {
