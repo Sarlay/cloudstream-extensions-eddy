@@ -50,7 +50,7 @@ class TagsMacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
 
     private fun initializeData() {
         val data = getLatestLoginData() ?: run {
-            MacIPTVProvider.tags = ""
+            MacIPTVProvider.tags = null
             return
         }
         MacIPTVProvider.tags = data.server.toString()
