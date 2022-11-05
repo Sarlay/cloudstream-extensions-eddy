@@ -27,7 +27,7 @@ class MacIptvSettingsFragment(private val plugin: Plugin, val maciptvAPI: MacIpt
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        val id = plugin.resources!!.getIdentifier("nginx_settings", "layout", BuildConfig.LIBRARY_PACKAGE_NAME)
+        val id = plugin.resources!!.getIdentifier("iptvbox_settings", "layout", BuildConfig.LIBRARY_PACKAGE_NAME)
         val layout = plugin.resources!!.getLayout(id)
         return inflater.inflate(layout, container, false)
     }

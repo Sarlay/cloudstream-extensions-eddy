@@ -24,7 +24,7 @@ class TagsIptvBoxSettingsFragments(private val plugin: Plugin, val tagsmaciptvAP
     ): View? {
         // Inflate the layout for this fragment
         val id = plugin.resources!!.getIdentifier(
-            "tags_settings",
+            "iptvbox_settings",
             "layout",
             "BuildConfig.LIBRARY_PACKAGE_NAME"
         )
