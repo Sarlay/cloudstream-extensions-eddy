@@ -8,6 +8,10 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
 import kotlin.collections.ArrayList
+import com.lagradost.cloudstream3.network.CloudflareKiller
+import com.lagradost.nicehttp.NiceResponse
+import kotlinx.coroutines.runBlocking
+
 
 class WiflixProvider : MainAPI() {
 
@@ -19,7 +23,22 @@ class WiflixProvider : MainAPI() {
     override var lang = "fr" // fournisseur est en francais
     override val supportedTypes =
         setOf(TvType.Movie, TvType.TvSeries) // series, films
-    // liste des types: https://recloudstream.github.io/dokka/app/com.lagradost.cloudstream3/-tv-type/index.html
+    private val interceptor = CloudflareKiller()
+    init {
+        runBlocking {
+            if (!ismainUrlChecked) {
+                ismainUrlChecked = true
+                val data =
+                    tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
+                data.forEach {
+                    if (it.title.lowercase().contains("wiflix")) {
+                        mainUrl = it.url
+                    }
+                }
+            }
+        }
+
+    }
 
     /**
     Cherche le site pour un titre spécifique
@@ -77,11 +96,11 @@ class WiflixProvider : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document //
+        val document = avoidCloudflare(url).document //
         // url est le lien retourné par la fonction search (la variable href) ou la fonction getMainPage
 
         var episodes = ArrayList<Episode>()
-        var mediaType: TvType
+        val mediaType: TvType
         val episodeFrfound =
             document.select("div.blocfr")
 
@@ -194,14 +213,14 @@ class WiflixProvider : MainAPI() {
             tryParseJson<EpisodeData>(data)
         val url = parsedInfo?.url ?: data
 
-        val numeroEpisode = parsedInfo?.episodeNumber ?: null
+        val numeroEpisode = parsedInfo?.episodeNumber
 
-        val document = app.get(url).document
+        val document = avoidCloudflare(url).document
         val episodeFrfound =
             document.select("div.blocfr")
         val episodeVostfrfound =
             document.select("div.blocvostfr")
-        var lang = document.select("[itemprop=inLanguage]").text()
+        val lang = document.select("[itemprop=inLanguage]").text()
         var flag = "\uD83C\uDDE8\uD83C\uDDF5"
 
         val cssCodeForPlayer = if (episodeFrfound.text().contains("Episode")) {
@@ -215,11 +234,11 @@ class WiflixProvider : MainAPI() {
         }
 
         if (cssCodeForPlayer.contains("vs") || lang.contains("VOSTFR")) {
-            flag =  " \uD83D\uDCDC \uD83C\uDDEC\uD83C\uDDE7"
+            flag = " \uD83D\uDCDC \uD83C\uDDEC\uD83C\uDDE7"
         } //flag =" \uD83C\uDDEC\uD83C\uDDE7"  drapeau anglais
 
 
-        document.select("$cssCodeForPlayer").apmap { player -> // séléctione tous les players
+        document.select(cssCodeForPlayer).apmap { player -> // séléctione tous les players
             var playerUrl = "https" + player.attr("href").replace("(.*)https".toRegex(), "")
             if (!playerUrl.isNullOrBlank())
                 if (playerUrl.contains("dood")) {
@@ -292,6 +311,24 @@ class WiflixProvider : MainAPI() {
         }
     }
 
+
+
+    suspend fun avoidCloudflare(url: String): NiceResponse {
+        if (app.get(url).document.connection() == null) {
+            return app.get(url, interceptor = interceptor)
+        } else {
+            return app.get(url)
+        }
+    }
+
+    data class mediaData(
+        @JsonProperty("title") var title: String,
+        @JsonProperty("url") val url: String,
+    )
+
+    private var ismainUrlChecked = false
+
+
     override val mainPage = mainPageOf(
         Pair("$mainUrl/films-prochainement/page/", "Film Prochainement en Streaming"),
         Pair("$mainUrl/film-en-streaming/page/", "Top Films cette année"),
@@ -302,7 +339,13 @@ class WiflixProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = request.data + page
-        val document = app.get(url).document
+
+        println("")
+        val document =
+            avoidCloudflare(url).document
+
+        //                posterHeaders = interceptor.getCookieHeaders(url).toMap()
+
         val movies = document.select("div#dle-content > div.clearfix")
 
         val home =

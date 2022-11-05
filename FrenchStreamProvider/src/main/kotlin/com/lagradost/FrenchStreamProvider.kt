@@ -3,8 +3,10 @@ package com.lagradost
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.extractorApis
+import kotlinx.coroutines.runBlocking
 import org.jsoup.nodes.Element
 
 
@@ -15,6 +17,26 @@ class FrenchStreamProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "fr"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
+
+    init {
+        runBlocking {
+            if (!ismainUrlChecked) {
+                ismainUrlChecked = true
+                val document = app.get(mainUrl).document
+                val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
+                if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("french-stream")) {
+                    mainUrl = newMainUrl
+                } else {
+                    AppUtils.tryParseJson<ArrayList<WiflixProvider.mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
+                        .forEach {
+                            if (it.title.lowercase().contains("french-stream")) {
+                                mainUrl = it.url
+                            }
+                        }
+                }
+            }
+        }
+    }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val link = "$mainUrl/?do=search&subaction=search&story=$query" // search'
@@ -291,14 +313,6 @@ class FrenchStreamProvider : MainAPI() {
     private var ismainUrlChecked = false
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = request.data + page
-        if (!ismainUrlChecked) {
-            ismainUrlChecked = true
-            val document = app.get(mainUrl).document
-            val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
-            if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("french-stream")) {
-                mainUrl = newMainUrl
-            }
-        }
         val document = app.get(url).document
         val movies = document.select("div#dle-content > div.short")
 
@@ -310,3 +324,4 @@ class FrenchStreamProvider : MainAPI() {
     }
 
 }
+
