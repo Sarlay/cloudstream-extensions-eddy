@@ -17,22 +17,25 @@ class TagsMacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
     override val createAccountUrl = ""
 
     companion object {
-        const val IPTVBOX_USER_KEY: String = "tagsiptvbox_user"
+        const val IPTVBOX_USER_KEY1: String = "tagsiptvbox_user"
     }
 
     override fun getLatestLoginData(): InAppAuthAPI.LoginData? {
-        return getKey(accountId, IPTVBOX_USER_KEY)
+        return getKey(accountId, IPTVBOX_USER_KEY1)
     }
 
     override fun loginInfo(): AuthAPI.LoginInfo? {
         val data = getLatestLoginData() ?: return null
-        return AuthAPI.LoginInfo(name = data.username ?: data.server, accountIndex = accountIndex)
+        return AuthAPI.LoginInfo(
+            name = data.username ?: data.server ?: data.password,
+            accountIndex = accountIndex
+        )
     }
 
     override suspend fun login(data: InAppAuthAPI.LoginData): Boolean {
         if (data.server.isNullOrBlank() && data.username.isNullOrBlank() && data.password.isNullOrBlank()) return false // we require a server
         switchToNewAccount()
-        setKey(accountId, IPTVBOX_USER_KEY, data)
+        setKey(accountId, IPTVBOX_USER_KEY1, data)
         registerAccount()
         initialize()
         inAppAuths
@@ -52,7 +55,7 @@ class TagsMacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
         }
         MacIPTVProvider.tags = ""
         listOf(data.server, data.password, data.username).forEach {
-            if (!it.isNullOrBlank()) {
+            if (!it.isNullOrBlank() && it.trim() != "") {
                 MacIPTVProvider.tags = "$it|" + MacIPTVProvider.tags
             }
         }
