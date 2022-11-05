@@ -19,7 +19,11 @@ import com.lagradost.cloudstream3.ui.settings.SettingsAccount.Companion.addAccou
 import com.lagradost.cloudstream3.utils.UIHelper.colorFromAttribute
 
 
-class MacIptvSettingsFragment(private val plugin: Plugin, val maciptvAPI: MacIptvAPI) :
+class MacIptvSettingsFragment(
+    private val plugin: Plugin,
+    val maciptvAPI: MacIptvAPI,
+    val tagsmaciptvAPI: TagsMacIptvAPI
+) :
     BottomSheetDialogFragment() {
 
     override fun onCreateView(
@@ -27,7 +31,11 @@ class MacIptvSettingsFragment(private val plugin: Plugin, val maciptvAPI: MacIpt
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        val id = plugin.resources!!.getIdentifier("iptvbox_settings", "layout", BuildConfig.LIBRARY_PACKAGE_NAME)
+        val id = plugin.resources!!.getIdentifier(
+            "nginx_settings",
+            "layout",
+            BuildConfig.LIBRARY_PACKAGE_NAME
+        )
         val layout = plugin.resources!!.getLayout(id)
         return inflater.inflate(layout, container, false)
     }
@@ -38,12 +46,14 @@ class MacIptvSettingsFragment(private val plugin: Plugin, val maciptvAPI: MacIpt
     }
 
     private fun getDrawable(name: String): Drawable? {
-        val id = plugin.resources!!.getIdentifier(name, "drawable", BuildConfig.LIBRARY_PACKAGE_NAME)
+        val id =
+            plugin.resources!!.getIdentifier(name, "drawable", BuildConfig.LIBRARY_PACKAGE_NAME)
         return ResourcesCompat.getDrawable(plugin.resources!!, id, null)
     }
 
     private fun getString(name: String): String? {
-        val id = plugin.resources!!.getIdentifier(name, "string", BuildConfig.LIBRARY_PACKAGE_NAME)
+        val id =
+            plugin.resources!!.getIdentifier(name, "string", BuildConfig.LIBRARY_PACKAGE_NAME)
         return plugin.resources!!.getString(id)
     }
 
@@ -77,7 +87,8 @@ class MacIptvSettingsFragment(private val plugin: Plugin, val maciptvAPI: MacIpt
 
         loginTextView.text = view.context.resources.getString(R.string.login_format).format(
             maciptvAPI.name,
-            view.context.resources.getString(R.string.account))
+            view.context.resources.getString(R.string.account)
+        )
 
         loginView.setOnClickListener(object : View.OnClickListener {
             override fun onClick(v: View?) {
@@ -86,6 +97,41 @@ class MacIptvSettingsFragment(private val plugin: Plugin, val maciptvAPI: MacIpt
                     showLoginInfo(activity, maciptvAPI, info)
                 } else {
                     addAccount(activity, maciptvAPI)
+                }
+            }
+        })
+
+        val infoViewTags = view.findView<LinearLayout>("tags_info")
+        val infoTextViewTags = view.findView<TextView>("tagsinfo_main_text")
+        val infoSubTextViewTags = view.findView<TextView>("tags_sub_text")
+
+        infoTextViewTags.text = getString("tags_info_title") ?: "MacIPTV"
+        infoSubTextViewTags.text = getString("tags_info_summary") ?: ""
+
+
+        val loginViewTags = view.findView<LinearLayout>("tags_login")
+        val loginTextViewTags = view.findView<TextView>("tagsmain_text")
+
+        // object : View.OnClickListener is required to make it compile because otherwise it used invoke-customs
+        infoViewTags.setOnClickListener(object : View.OnClickListener {
+            override fun onClick(v: View?) {
+                println("It's OK")
+            }
+        })
+
+
+        loginTextViewTags.text = view.context.resources.getString(R.string.login_format).format(
+            tagsmaciptvAPI.name,
+            view.context.resources.getString(R.string.account)
+        )
+
+        loginViewTags.setOnClickListener(object : View.OnClickListener {
+            override fun onClick(v: View?) {
+                val info = tagsmaciptvAPI.loginInfo()
+                if (info != null) {
+                    showLoginInfo(activity, tagsmaciptvAPI, info)
+                } else {
+                    addAccount(activity, tagsmaciptvAPI)
                 }
             }
         })

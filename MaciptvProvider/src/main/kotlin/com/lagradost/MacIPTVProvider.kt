@@ -58,6 +58,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
     }
 
     private suspend fun getAuthHeader() {
+        if (tags.uppercase().trim() == "NONE" || tags.isBlank()) tags = lang
         tags = tags.uppercase()
         oldAthMac = loginMac
         oldAthUrl = overrideUrl
