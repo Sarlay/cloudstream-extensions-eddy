@@ -58,6 +58,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
     }
 
     private suspend fun getAuthHeader() {
+        tags = tags.uppercase()
         oldAthMac = loginMac
         oldAthUrl = overrideUrl
         mainUrl = overrideUrl.toString()
@@ -539,7 +540,8 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     if (idGenre!!.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
                             .contains(rgxcodeCountry) ||
                                 categoryTitle.isContainsTargetCountry(provider)
-                                )
+                                ) || categoryTitle.uppercase()
+                            .contains(findKeyWord(tags))
                     ) {
                         val itr = channels.iterator()
                         while (itr.hasNext()) {
@@ -585,7 +587,8 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     if (categoryTitle.uppercase()
                             .contains(rgxcodeCountry) || categoryTitle.isContainsTargetCountry(
                             provider
-                        )
+                        ) || categoryTitle.uppercase()
+                            .contains(findKeyWord(tags))
                     ) {
                         flag = getFlag(categoryTitle)
                         val nameGenre = if (firstCat) {
@@ -648,6 +651,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         var companionName: String? = null
         var loginMac: String? = null
         var overrideUrl: String? = null
+        var tags: String = ""
         private var oldAthMac: String? = null
         private var oldAthUrl: String? = null
         private var headerMac = mutableMapOf<String, String>()
