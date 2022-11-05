@@ -85,7 +85,13 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="20dp">
-
+        <ImageView
+            android:id="@+id/tagsiptvbox_login_imageview"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="start|center_vertical"
+            android:layout_marginEnd="20dp"
+            android:scaleType="centerInside" />
 
 
         <LinearLayout
