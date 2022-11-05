@@ -27,7 +27,7 @@ class TagsMacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
     override fun loginInfo(): AuthAPI.LoginInfo? {
         val data = getLatestLoginData() ?: return null
         return AuthAPI.LoginInfo(
-            name = data.username ?: data.server ?: data.password,
+            name = data.server?:"MyTags",
             accountIndex = accountIndex
         )
     }
