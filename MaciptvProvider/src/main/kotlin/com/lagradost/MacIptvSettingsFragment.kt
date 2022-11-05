@@ -70,9 +70,9 @@ class MacIptvSettingsFragment(
         val loginView = view.findView<LinearLayout>("iptvbox_login")
         val loginTextView = view.findView<TextView>("main_text")
         val loginImageView = view.findView<ImageView>("iptvbox_login_imageview")
-      /*  loginImageView.setImageDrawable(getDrawable("iptvbox"))
+        loginImageView.setImageDrawable(getDrawable("iptvbox"))
         loginImageView.imageTintList =
-            ColorStateList.valueOf(view.context.colorFromAttribute(R.attr.white))*/
+            ColorStateList.valueOf(view.context.colorFromAttribute(R.attr.white))
 
         infoView.setOnClickListener(object : View.OnClickListener {
             override fun onClick(v: View?) {
@@ -107,6 +107,7 @@ class MacIptvSettingsFragment(
 
         val loginViewTags = view.findView<LinearLayout>("tags_login")
         val loginTextViewTags = view.findView<TextView>("tagsmain_text")
+
 
         // object : View.OnClickListener is required to make it compile because otherwise it used invoke-customs
         infoViewTags.setOnClickListener(object : View.OnClickListener {
