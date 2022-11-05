@@ -12,7 +12,6 @@ import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import com.lagradost.cloudstream3.R
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.lagradost.cloudstream3.AcraApplication.Companion.openBrowser
 import com.lagradost.cloudstream3.plugins.Plugin
 import com.lagradost.cloudstream3.ui.settings.SettingsAccount.Companion.showLoginInfo
 import com.lagradost.cloudstream3.ui.settings.SettingsAccount.Companion.addAccount
@@ -59,28 +58,27 @@ class MacIptvSettingsFragment(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val infoView = view.findView<LinearLayout>("nginx_info")
+        val infoView = view.findView<LinearLayout>("iptvbox_info")
         val infoTextView = view.findView<TextView>("info_main_text")
         val infoSubTextView = view.findView<TextView>("info_sub_text")
-        val infoImageView = view.findView<ImageView>("nginx_info_imageview")
+        val infoImageView = view.findView<ImageView>("iptvbox_info_imageview")
 
-        infoTextView.text = getString("nginx_info_title") ?: "MacIPTV"
-        infoSubTextView.text = getString("nginx_info_summary") ?: ""
-        infoImageView.setImageDrawable(getDrawable("nginx_question"))
+        infoTextView.text = getString("iptvbox_info_title") ?: "MacIPTV"
+        infoSubTextView.text = getString("iptvbox_info_summary") ?: ""
+        infoImageView.setImageDrawable(getDrawable("iptvbox_question"))
         infoImageView.imageTintList =
             ColorStateList.valueOf(view.context.colorFromAttribute(R.attr.white))
 
-        val loginView = view.findView<LinearLayout>("nginx_login")
+        val loginView = view.findView<LinearLayout>("iptvbox_login")
         val loginTextView = view.findView<TextView>("main_text")
-        val loginImageView = view.findView<ImageView>("nginx_login_imageview")
-        loginImageView.setImageDrawable(getDrawable("nginx"))
+        val loginImageView = view.findView<ImageView>("iptvbox_login_imageview")
+        loginImageView.setImageDrawable(getDrawable("iptvbox"))
         loginImageView.imageTintList =
             ColorStateList.valueOf(view.context.colorFromAttribute(R.attr.white))
 
-        // object : View.OnClickListener is required to make it compile because otherwise it used invoke-customs
         infoView.setOnClickListener(object : View.OnClickListener {
             override fun onClick(v: View?) {
-                openBrowser(maciptvAPI.createAccountUrl)
+                println("It's OK")
             }
         })
 
