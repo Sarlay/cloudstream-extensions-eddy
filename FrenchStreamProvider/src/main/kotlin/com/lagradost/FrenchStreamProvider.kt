@@ -21,20 +21,29 @@ class FrenchStreamProvider : MainAPI() {
 
     init {
         runBlocking {
-            if (!ismainUrlChecked) {
-                ismainUrlChecked = true
+            try {
                 val document = app.get(mainUrl).document
                 val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
                 if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("french-stream")) {
                     mainUrl = newMainUrl
                 } else {
-                    AppUtils.tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
-                        .forEach {
-                            if (it.title.lowercase().contains("french-stream")) {
-                                mainUrl = it.url
-                            }
+                    val data =
+                        AppUtils.tryParseJson<ArrayList<WiflixProvider.mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
+                    data.forEach {
+                        if (it.title.lowercase().contains("french-stream")) {
+                            mainUrl = it.url
                         }
+                    }
                 }
+            } catch (e: Exception) { // url changed
+                val data =
+                    AppUtils.tryParseJson<ArrayList<WiflixProvider.mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
+                data.forEach {
+                    if (it.title.lowercase().contains("french-stream")) {
+                        mainUrl = it.url
+                    }
+                }
+
             }
         }
     }
@@ -52,20 +61,53 @@ class FrenchStreamProvider : MainAPI() {
         return allresultshome
     }
 
+    private fun Element.takeEpisode(
+        url: String,
+    ): MutableList<Episode> {
+        return this.select("a").map { a ->
+            val epNum = Regex("""pisode[\s]+(\d+)""").find(a.text().lowercase())?.groupValues?.get(1)?.toIntOrNull()
+            val epTitle = if (a.text().contains("Episode")) {
+                val type = if ("honey" in a.attr("id")) {
+                    "VF"
+                } else {
+                    "Vostfr"
+                }
+                "Episode " + type
+            } else {
+                a.text()
+            }
+            /*   if (poster == null) {
+                   poster = a.selectFirst("div.fposter > img")?.attr("src")
+               }*/
+            Episode(
+                fixUrl(url).plus("-episodenumber:$epNum"),
+                epTitle,
+                null,
+                epNum,
+                a.selectFirst("div.fposter > img")?.attr("src"),  // episode Thumbnail
+            )
+        }.toMutableList()
+    }
+
     override suspend fun load(url: String): LoadResponse {
         val soup = app.get(url).document
-
+        var subEpisodes = mutableListOf<Episode>()
+        var dubEpisodes = mutableListOf<Episode>()
         val title = soup.selectFirst("h1#s-title")!!.text().toString()
-        val isMovie = !title.contains("saison", ignoreCase = true)
         val description =
             soup.selectFirst("div.fdesc")!!.text().toString()
                 .split("streaming", ignoreCase = true)[1].replace(":", "")
-        var poster = soup.selectFirst("div.fposter > img")?.attr("src")
+        val poster = soup.selectFirst("div.fposter > img")?.attr("src")
         val listEpisode = soup.select("div.elink")
         val tags = soup.select("ul.flist-col > li").getOrNull(1)
         //val rating = soup.select("span[id^=vote-num-id]")?.getOrNull(1)?.text()?.toInt()
-
-        if (isMovie) {
+        if ("<a" in (listEpisode[1]).toString()) {  // check if VF is empty
+            subEpisodes = listEpisode[1].takeEpisode(url) //  return vostfr
+        }
+        if ("<a" in (listEpisode[0]).toString()) {
+            dubEpisodes = listEpisode[0].takeEpisode(url)//  return vf
+        }
+        if (subEpisodes.isEmpty() && dubEpisodes.isEmpty()) {
             val yearRegex = Regex("""ate de sortie\: (\d*)""")
             val year = yearRegex.find(soup.text())?.groupValues?.get(1)
             val tagsList = tags?.select("a")
@@ -80,56 +122,21 @@ class FrenchStreamProvider : MainAPI() {
                 //this.rating = rating
                 addTrailer(soup.selectFirst("button#myBtn > a")?.attr("href"))
             }
-        } else  // a tv serie
-        {
+        } else {
 
-            val episodeList = if ("<a" !in (listEpisode[0]).toString()) {  // check if VF is empty
-                listEpisode[1]  // no vf, return vostfr
-            } else {
-                listEpisode[0] // no vostfr, return vf
-            }
-
-            val episodes = episodeList.select("a").map { a ->
-                val epNum = a.text().split("Episode")[1].trim().toIntOrNull()
-                val epTitle = if (a.text().contains("Episode")) {
-                    val type = if ("honey" in a.attr("id")) {
-                        "VF"
-                    } else {
-                        "Vostfr"
-                    }
-                    "Episode " + type
-                } else {
-                    a.text()
-                }
-                if (poster == null) {
-                    poster = a.selectFirst("div.fposter > img")?.attr("src")
-                }
-                Episode(
-                    fixUrl(url).plus("-episodenumber:$epNum"),
-                    epTitle,
-                    null,
-                    epNum,
-                    null,  // episode Thumbnail
-                    null // episode date
-                )
-            }
-
-            // val tagsList = tags?.text()?.replace("Genre :","")
             val yearRegex = Regex("""Titre .* \/ (\d*)""")
             val year = yearRegex.find(soup.text())?.groupValues?.get(1)
-            return newTvSeriesLoadResponse(
+            return newAnimeLoadResponse(
                 title,
                 url,
                 TvType.TvSeries,
-                episodes,
             ) {
                 this.posterUrl = poster
                 this.plot = description
                 this.year = year?.toInt()
-                //this.rating = rating
-                //this.showStatus = ShowStatus.Ongoing
-                //this.tags = tagsList
                 addTrailer(soup.selectFirst("button#myBtn > a")?.attr("href"))
+                if (subEpisodes.isNotEmpty()) addEpisodes(DubStatus.Subbed, subEpisodes)
+                if (dubEpisodes.isNotEmpty()) addEpisodes(DubStatus.Dubbed, dubEpisodes)
             }
         }
     }
@@ -261,19 +268,20 @@ class FrenchStreamProvider : MainAPI() {
 
         val posterUrl = fixUrl(select("a.short-poster > img").attr("src"))
         val qualityExtracted = select("span.film-ripz > a").text()
-        val type = select("span.mli-eps").text()
+        val type = select("span.mli-eps").text().lowercase()
         val title = select("div.short-title").text()
         val link = select("a.short-poster").attr("href").replace("wvw.", "") //wvw is an issue
-        var quality = when (!qualityExtracted.isNullOrBlank()) {
-            qualityExtracted.contains("HDLight") -> getQualityFromString("HD")
-            qualityExtracted.contains("Bdrip") -> getQualityFromString("BlueRay")
-            qualityExtracted.contains("DVD") -> getQualityFromString("DVD")
-            qualityExtracted.contains("CAM") -> getQualityFromString("Cam")
+        val quality = getQualityFromString(
+            when (!qualityExtracted.isNullOrBlank()) {
+                qualityExtracted.contains("HDLight") -> "HD"
+                qualityExtracted.contains("Bdrip") -> "BlueRay"
+                qualityExtracted.contains("DVD") -> "DVD"
+                qualityExtracted.contains("CAM") -> "Cam"
+                else -> null
+            }
+        )
 
-            else -> null
-        }
-
-        if (type.contains("Eps", false)) {
+        if (!type.contains("eps")) {
             return MovieSearchResponse(
                 name = title,
                 url = link,
@@ -287,16 +295,19 @@ class FrenchStreamProvider : MainAPI() {
 
         } else  // an Serie
         {
-
-            return TvSeriesSearchResponse(
+            return newAnimeSearchResponse(
                 name = title,
                 url = link,
-                apiName = title,
                 type = TvType.TvSeries,
-                posterUrl = posterUrl,
-                quality = quality,
-                //
-            )
+
+                ) {
+                this.posterUrl = posterUrl
+                addDubStatus(
+                    isDub = select("span.film-verz").text().uppercase().contains("VF"),
+                    episodes = select("span.mli-eps>i").text().toIntOrNull()
+                )
+            }
+
 
         }
     }
@@ -316,7 +327,7 @@ class FrenchStreamProvider : MainAPI() {
         Pair("$mainUrl/film/documentaire/page/", "Documentaire")
 
     )
-    private var ismainUrlChecked = false
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = request.data + page
         val document = app.get(url).document
@@ -328,6 +339,5 @@ class FrenchStreamProvider : MainAPI() {
             }
         return newHomePageResponse(request.name, home)
     }
-
 }
 
