@@ -28,7 +28,7 @@ class FrenchStreamProvider : MainAPI() {
                     mainUrl = newMainUrl
                 } else {
                     val data =
-                        AppUtils.tryParseJson<ArrayList<WiflixProvider.mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
+                        AppUtils.tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
                     data.forEach {
                         if (it.title.lowercase().contains("french-stream")) {
                             mainUrl = it.url
@@ -37,7 +37,7 @@ class FrenchStreamProvider : MainAPI() {
                 }
             } catch (e: Exception) { // url changed
                 val data =
-                    AppUtils.tryParseJson<ArrayList<WiflixProvider.mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
+                    AppUtils.tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
                 data.forEach {
                     if (it.title.lowercase().contains("french-stream")) {
                         mainUrl = it.url
@@ -65,7 +65,9 @@ class FrenchStreamProvider : MainAPI() {
         url: String,
     ): MutableList<Episode> {
         return this.select("a").map { a ->
-            val epNum = Regex("""pisode[\s]+(\d+)""").find(a.text().lowercase())?.groupValues?.get(1)?.toIntOrNull()
+            val epNum =
+                Regex("""pisode[\s]+(\d+)""").find(a.text().lowercase())?.groupValues?.get(1)
+                    ?.toIntOrNull()
             val epTitle = if (a.text().contains("Episode")) {
                 val type = if ("honey" in a.attr("id")) {
                     "VF"
@@ -76,15 +78,13 @@ class FrenchStreamProvider : MainAPI() {
             } else {
                 a.text()
             }
-            /*   if (poster == null) {
-                   poster = a.selectFirst("div.fposter > img")?.attr("src")
-               }*/
+
             Episode(
                 fixUrl(url).plus("-episodenumber:$epNum"),
                 epTitle,
                 null,
                 epNum,
-                a.selectFirst("div.fposter > img")?.attr("src"),  // episode Thumbnail
+                a.selectFirst("div.fposter > img")?.attr("src"),
             )
         }.toMutableList()
     }
