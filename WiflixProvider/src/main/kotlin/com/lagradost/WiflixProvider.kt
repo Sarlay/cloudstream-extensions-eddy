@@ -91,8 +91,12 @@ class WiflixProvider : MainAPI() {
 
             episodes.add(
                 Episode(
-                    link,
-                    name = duborSub,
+                    link + if (duborSub=="vostfr") {
+                        "*$duborSub*"
+                    } else {
+                        ""
+                    },
+                    name = "Episode en " + duborSub,
                     episode = strEpisodeN.toIntOrNull(),
                     posterUrl = posterUrl
                 )
@@ -125,11 +129,11 @@ class WiflixProvider : MainAPI() {
             .map { it.text() } // séléctione tous les tags et les ajoutes à une liste
         mediaType = TvType.TvSeries
         if (episodeFrfound.text().lowercase().contains("episode")) {
-            val duborSub = "Episode en \uD83C\uDDE8\uD83C\uDDF5"
+            val duborSub = "\uD83C\uDDE8\uD83C\uDDF5"
             dubEpisodes = episodeFrfound.takeEpisode(url, fixUrl(posterUrl), duborSub)
         }
         if (episodeVostfrfound.text().lowercase().contains("episode")) {
-            val duborSub = "Episode en vostfr"
+            val duborSub = "vostfr"
             subEpisodes = episodeVostfrfound.takeEpisode(url, fixUrl(posterUrl), duborSub)
         }
         ///////////////////////////////////////////
@@ -212,8 +216,14 @@ class WiflixProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
-        val parsedInfo =
+        var isvostfr = false
+        val parsedInfo = if (data.takeLast(8) == "*vostfr*") {
+            isvostfr = true
+            tryParseJson<EpisodeData>(data.dropLast(6))
+        } else {
             tryParseJson<EpisodeData>(data)
+        }
+
         val url = parsedInfo?.url ?: data
 
         val numeroEpisode = parsedInfo?.episodeNumber
@@ -225,7 +235,7 @@ class WiflixProvider : MainAPI() {
             document.select("div.blocvostfr")
         var flag = "\uD83C\uDDE8\uD83C\uDDF5"
 
-        val cssCodeForPlayer = if (episodeFrfound.text().contains("Episode")) {
+        val cssCodeForPlayer = if (episodeFrfound.text().contains("Episode") && !isvostfr) {
             "div.ep${numeroEpisode}vf > a"
 
         } else if (episodeVostfrfound.text().contains("Episode")) {
@@ -237,7 +247,7 @@ class WiflixProvider : MainAPI() {
 
         if (cssCodeForPlayer.contains("vs")) {
             flag = " \uD83D\uDCDC \uD83C\uDDEC\uD83C\uDDE7"
-        } //flag =" \uD83C\uDDEC\uD83C\uDDE7"  drapeau anglais
+        }
 
 
         document.select(cssCodeForPlayer).apmap { player -> // séléctione tous les players
@@ -361,4 +371,5 @@ class WiflixProvider : MainAPI() {
     }
 
 }
+
 
