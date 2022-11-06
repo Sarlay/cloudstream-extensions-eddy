@@ -80,7 +80,11 @@ class FrenchStreamProvider : MainAPI() {
             }
 
             Episode(
-                fixUrl(url).plus("-episodenumber:$epNum"),
+                fixUrl(url).plus("-episodenumber:$epNum") + if (epTitle.contains("Vostfr")) {
+                    "*vostfr*"
+                } else {
+                    ""
+                },
                 epTitle,
                 null,
                 epNum,
@@ -157,6 +161,7 @@ class FrenchStreamProvider : MainAPI() {
         }
     }
 
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -166,8 +171,14 @@ class FrenchStreamProvider : MainAPI() {
         val servers =
             if (data.contains("-episodenumber:"))// It's a serie:
             {
+                val isvostfr = data.takeLast(8) == "*vostfr*"
+
                 val split =
-                    data.split("-episodenumber:")  // the data contains the url and the wanted episode number (a temporary dirty fix that will last forever)
+                    if (isvostfr) {
+                        data.dropLast(8).split("-episodenumber:")
+                    } else {
+                        data.split("-episodenumber:")
+                    } // the data contains the url and the wanted episode number (a temporary dirty fix that will last forever)
                 val url = split[0]
                 val wantedEpisode =
                     if (split[1] == "2") { // the episode number 2 has id of ABCDE, don't ask any question
@@ -215,7 +226,11 @@ class FrenchStreamProvider : MainAPI() {
                                 null
                             }
                         }
-                serversvf + serversvo
+                if (isvostfr) {
+                    serversvo
+                } else {
+                    serversvf
+                }
             } else {  // it's a movie
                 val movieServers =
                     app.get(fixUrl(data)).document.select("nav#primary_nav_wrap > ul > li > ul > li > a")
@@ -248,7 +263,7 @@ class FrenchStreamProvider : MainAPI() {
                         allowRedirects = false
                     ).headers
                     val urlplayer = it.second
-                    var playerUrl = when (!urlplayer.isNullOrEmpty()) {
+                    val playerUrl = when (!urlplayer.isNullOrEmpty()) {
                         urlplayer.contains("opsktp.com") -> header.get("location")
                             .toString() // case where there is redirection to opsktp
 
@@ -340,4 +355,5 @@ class FrenchStreamProvider : MainAPI() {
         return newHomePageResponse(request.name, home)
     }
 }
+
 
