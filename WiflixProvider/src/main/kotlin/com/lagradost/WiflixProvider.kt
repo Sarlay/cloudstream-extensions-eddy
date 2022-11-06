@@ -16,7 +16,7 @@ import kotlinx.coroutines.runBlocking
 class WiflixProvider : MainAPI() {
 
 
-    override var mainUrl = "https://wiflix.zone"
+    override var mainUrl = "https://wiflix.cafe"
     override var name = "Wiflix"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
@@ -24,10 +24,12 @@ class WiflixProvider : MainAPI() {
     override val supportedTypes =
         setOf(TvType.Movie, TvType.TvSeries) // series, films
     private val interceptor = CloudflareKiller()
+
     init {
         runBlocking {
-            if (!ismainUrlChecked) {
-                ismainUrlChecked = true
+            try {
+                app.get(mainUrl)
+            } catch (e: Exception) { // url changed
                 val data =
                     tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
                 data.forEach {
@@ -35,9 +37,9 @@ class WiflixProvider : MainAPI() {
                         mainUrl = it.url
                     }
                 }
+
             }
         }
-
     }
 
     /**
@@ -69,13 +71,17 @@ class WiflixProvider : MainAPI() {
         @JsonProperty("episodeNumber") val episodeNumber: String,
     )
 
-    private fun Elements.takeEpisode(url: String, duborSub: String?): ArrayList<Episode> {
+    private fun Elements.takeEpisode(
+        url: String,
+        posterUrl: String?,
+        duborSub: String?
+    ): ArrayList<Episode> {
 
         val episodes = ArrayList<Episode>()
         this.select("ul.eplist > li").forEach {
 
-            val strEpisode = it.text()
-            val strEpisodeN = strEpisode.replace("Episode ", "")
+            val strEpisodeN =
+                Regex("""pisode[\s]+(\d+)""").find(it.text())?.groupValues?.get(1).toString()
             val link =
                 EpisodeData(
                     url,
@@ -87,7 +93,8 @@ class WiflixProvider : MainAPI() {
                 Episode(
                     link,
                     name = duborSub,
-                    episode = strEpisodeN.toInt(),
+                    episode = strEpisodeN.toIntOrNull(),
+                    posterUrl = posterUrl
                 )
             )
         }
@@ -98,8 +105,8 @@ class WiflixProvider : MainAPI() {
     override suspend fun load(url: String): LoadResponse {
         val document = avoidCloudflare(url).document //
         // url est le lien retourné par la fonction search (la variable href) ou la fonction getMainPage
-
-        var episodes = ArrayList<Episode>()
+        var subEpisodes = ArrayList<Episode>()
+        var dubEpisodes = ArrayList<Episode>()
         val mediaType: TvType
         val episodeFrfound =
             document.select("div.blocfr")
@@ -116,27 +123,23 @@ class WiflixProvider : MainAPI() {
 
         val tags = document.select("[itemprop=genre] > a")
             .map { it.text() } // séléctione tous les tags et les ajoutes à une liste
-
-        if (episodeFrfound.text().contains("Episode")) {
-            mediaType = TvType.TvSeries
-            val duborSub = "Episode en VF"
-            episodes = episodeFrfound.takeEpisode(url, duborSub)
-        } else if (episodeVostfrfound.text().contains("Episode")) {
-            mediaType = TvType.TvSeries
-            val duborSub = "Episode sous-titré"
-            episodes = episodeVostfrfound.takeEpisode(url, duborSub)
-        } else {
-
-            mediaType = TvType.Movie
+        mediaType = TvType.TvSeries
+        if (episodeFrfound.text().lowercase().contains("episode")) {
+            val duborSub = "Episode en \uD83C\uDDE8\uD83C\uDDF5"
+            dubEpisodes = episodeFrfound.takeEpisode(url, fixUrl(posterUrl), duborSub)
+        }
+        if (episodeVostfrfound.text().lowercase().contains("episode")) {
+            val duborSub = "Episode en vostfr"
+            subEpisodes = episodeVostfrfound.takeEpisode(url, fixUrl(posterUrl), duborSub)
         }
         ///////////////////////////////////////////
         ///////////////////////////////////////////
         var type_rec: TvType
         val recommendations =
-            document.select("div.clearfixme > div > div")?.mapNotNull { element ->
+            document.select("div.clearfixme > div > div").mapNotNull { element ->
                 val recTitle =
                     element.select("a").text() ?: return@mapNotNull null
-                val image = element.select("a >img")?.attr("src")
+                val image = element.select("a >img").attr("src")
                 val recUrl = element.select("a").attr("href")
                 type_rec = TvType.TvSeries
                 if (recUrl.contains("film")) type_rec = TvType.Movie
@@ -157,15 +160,14 @@ class WiflixProvider : MainAPI() {
                         this.name,
                         TvType.Movie,
                         image?.let { fixUrl(it) },
-
-                        )
+                    )
 
             }
 
-        var comingSoon = url.contains("films-prochainement")
+        val comingSoon = url.contains("films-prochainement")
 
 
-        if (mediaType == TvType.Movie) {
+        if (subEpisodes.isEmpty() && dubEpisodes.isEmpty()) {
             val description = document.selectFirst("div.screenshots-full")?.text()
                 ?.replace("(.* .ynopsis)".toRegex(), "")
             return newMovieLoadResponse(
@@ -184,11 +186,10 @@ class WiflixProvider : MainAPI() {
             }
         } else {
             val description = document.selectFirst("span[itemprop=description]")?.text()
-            return newTvSeriesLoadResponse(
+            return newAnimeLoadResponse(
                 title,
                 url,
                 mediaType,
-                episodes
             ) {
                 this.posterUrl = fixUrl(posterUrl)
                 this.plot = description
@@ -196,6 +197,8 @@ class WiflixProvider : MainAPI() {
                 this.year = year?.toIntOrNull()
                 this.comingSoon = comingSoon
                 this.tags = tags
+                if (subEpisodes.isNotEmpty()) addEpisodes(DubStatus.Subbed, subEpisodes)
+                if (dubEpisodes.isNotEmpty()) addEpisodes(DubStatus.Dubbed, dubEpisodes)
 
             }
         }
@@ -220,7 +223,6 @@ class WiflixProvider : MainAPI() {
             document.select("div.blocfr")
         val episodeVostfrfound =
             document.select("div.blocvostfr")
-        val lang = document.select("[itemprop=inLanguage]").text()
         var flag = "\uD83C\uDDE8\uD83C\uDDF5"
 
         val cssCodeForPlayer = if (episodeFrfound.text().contains("Episode")) {
@@ -233,14 +235,14 @@ class WiflixProvider : MainAPI() {
             "div.linkstab > a"
         }
 
-        if (cssCodeForPlayer.contains("vs") || lang.contains("VOSTFR")) {
+        if (cssCodeForPlayer.contains("vs")) {
             flag = " \uD83D\uDCDC \uD83C\uDDEC\uD83C\uDDE7"
         } //flag =" \uD83C\uDDEC\uD83C\uDDE7"  drapeau anglais
 
 
         document.select(cssCodeForPlayer).apmap { player -> // séléctione tous les players
             var playerUrl = "https" + player.attr("href").replace("(.*)https".toRegex(), "")
-            if (!playerUrl.isNullOrBlank())
+            if (!playerUrl.isBlank())
                 if (playerUrl.contains("dood")) {
                     playerUrl = playerUrl.replace("doodstream.com", "dood.wf")
                 }
@@ -272,18 +274,20 @@ class WiflixProvider : MainAPI() {
 
         val posterUrl = fixUrl(select("div.img-box > img").attr("src"))
         val qualityExtracted = select("div.nbloc1-2 >span").text()
-        val type = select("div.nbloc3").text()
+        val type = select("div.nbloc3").text().lowercase()
         val title = select("a.nowrap").text()
         val link = select("a.nowrap").attr("href")
-        var quality = when (!qualityExtracted.isNullOrBlank()) {
-            qualityExtracted.contains("HDLight") -> getQualityFromString("HD")
-            qualityExtracted.contains("Bdrip") -> getQualityFromString("BlueRay")
-            qualityExtracted.contains("DVD") -> getQualityFromString("DVD")
-            qualityExtracted.contains("CAM") -> getQualityFromString("Cam")
+        val quality = getQualityFromString(
+            when (!qualityExtracted.isNullOrBlank()) {
+                qualityExtracted.contains("HDLight") -> "HD"
+                qualityExtracted.contains("Bdrip") -> "BlueRay"
+                qualityExtracted.contains("DVD") -> "DVD"
+                qualityExtracted.contains("CAM") -> "Cam"
 
-            else -> null
-        }
-        if (type.contains("Film")) {
+                else -> null
+            }
+        )
+        if (type.contains("film")) {
             return MovieSearchResponse(
                 name = title,
                 url = link,
@@ -298,23 +302,28 @@ class WiflixProvider : MainAPI() {
         } else  // an Serie
         {
 
-            return TvSeriesSearchResponse(
+            return newAnimeSearchResponse(
                 name = title,
                 url = link,
-                apiName = title,
                 type = TvType.TvSeries,
-                posterUrl = posterUrl,
-                quality = quality,
-                //
-            )
+
+                ) {
+                this.posterUrl = posterUrl
+                this.quality = quality
+                addDubStatus(
+                    isDub = !select("span.block-sai").text().uppercase().contains("VOSTFR"),
+                    episodes = Regex("""pisode[\s]+(\d+)""").find(select("div.block-ep").text())?.groupValues?.get(
+                        1
+                    )?.toIntOrNull()
+                )
+            }
 
         }
     }
 
 
-
     suspend fun avoidCloudflare(url: String): NiceResponse {
-        if (app.get(url).document.connection() == null) {
+        if (!app.get(url).isSuccessful) {
             return app.get(url, interceptor = interceptor)
         } else {
             return app.get(url)
@@ -325,8 +334,6 @@ class WiflixProvider : MainAPI() {
         @JsonProperty("title") var title: String,
         @JsonProperty("url") val url: String,
     )
-
-    private var ismainUrlChecked = false
 
 
     override val mainPage = mainPageOf(
@@ -339,12 +346,10 @@ class WiflixProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = request.data + page
-
-        println("")
         val document =
             avoidCloudflare(url).document
 
-        //                posterHeaders = interceptor.getCookieHeaders(url).toMap()
+        //posterHeaders = interceptor.getCookieHeaders(url).toMap()
 
         val movies = document.select("div#dle-content > div.clearfix")
 
@@ -356,3 +361,4 @@ class WiflixProvider : MainAPI() {
     }
 
 }
+
