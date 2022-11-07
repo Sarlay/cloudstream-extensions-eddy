@@ -31,7 +31,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     private fun accountInfoNotGood(url: String, mac: String?): Boolean {
         return url.uppercase().trim() == "NONE" || url.isBlank() || mac?.uppercase()
-            ?.trim() == "NONE" || mac.isNullOrBlank()   
+            ?.trim() == "NONE" || mac.isNullOrBlank()
     }
 
     /**
@@ -439,7 +439,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
 
     private data class HomeResponse(
-        val channels: ArrayList<Data> = ArrayList(),
+        val channels: MutableList<Data> = ArrayList(),
     ) {
         fun String.isContainsTargetCountry(provider: MacIPTVProvider): Boolean {
             val getLang = provider.lang.uppercase()
@@ -455,11 +455,10 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         fun getHomePageListsInit(provider: MacIPTVProvider): List<HomePageList> {
             val rgxcodeCountry = provider.rgxcodeCountry
             var firstCat = true
-            // if (responseGetGenretoJSON.isNotEmpty() && channels.isNotEmpty()) {
             return responseGetGenretoJSON.mapNotNull { js ->
                 val idGenre = js.id.toString()
                 val categoryTitle = js.title.toString()
-                val arraychannel = ArrayList<Channel>()
+                val arraychannel = mutableListOf<Channel>()
                 if (channels.isNotEmpty() && idGenre.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
                         .contains(rgxcodeCountry) ||
                             categoryTitle.isContainsTargetCountry(provider)
@@ -526,6 +525,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         fun getHomePageListsFromArrayChannel(provider: MacIPTVProvider): List<HomePageList> {
             val rgxcodeCountry = provider.rgxcodeCountry
             var firstCat = true
+            val arrayChannel = provider.arraymediaPlaylist.toMutableList()
             return responseGetGenretoJSON.mapNotNull { js ->
                 val idGenre = js.id.toString()
                 val categoryTitle = js.title.toString()
@@ -546,7 +546,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                             cleanTitle(categoryTitle).replace(rgxcodeCountry, "").trim()
                         }"
                     }
-                    provider.arraymediaPlaylist.toHomePageList(
+                    arrayChannel.toHomePageList(
                         nameGenre,
                         provider,
                         idGenre
@@ -612,7 +612,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
             )
         }
 
-        fun ArrayList<Channel>.toSearchResponseHomePage(
+        fun MutableList<Channel>.toSearchResponseHomePage(
             provider: MacIPTVProvider, GenreId: String
         ): List<SearchResponse> {
             val groupChannel = ArrayList<String>()
@@ -653,7 +653,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
             return home
         }
 
-        fun ArrayList<Channel>.toHomePageList(
+        fun MutableList<Channel>.toHomePageList(
             name: String,
             provider: MacIPTVProvider,
             GenreId: String
