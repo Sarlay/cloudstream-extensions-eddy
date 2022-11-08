@@ -533,7 +533,8 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                 if (categoryTitle.uppercase()
                         .contains(rgxcodeCountry) || categoryTitle.isContainsTargetCountry(
                         provider
-                    )
+                    ) || categoryTitle.uppercase()
+                        .contains(findKeyWord(tags.toString()))
                 ) {
                     flag = getFlag(categoryTitle)
                     val nameGenre = if (firstCat) {
