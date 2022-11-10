@@ -105,12 +105,7 @@ class FrenchStreamProvider : MainAPI() {
         val listEpisode = soup.select("div.elink")
         val tags = soup.select("ul.flist-col > li").getOrNull(1)
         //val rating = soup.select("span[id^=vote-num-id]")?.getOrNull(1)?.text()?.toInt()
-        if ("<a" in (listEpisode[1]).toString()) {  // check if VF is empty
-            subEpisodes = listEpisode[1].takeEpisode(url) //  return vostfr
-        }
-        if ("<a" in (listEpisode[0]).toString()) {
-            dubEpisodes = listEpisode[0].takeEpisode(url)//  return vf
-        }
+
         if (subEpisodes.isEmpty() && dubEpisodes.isEmpty()) {
             val yearRegex = Regex("""ate de sortie\: (\d*)""")
             val year = yearRegex.find(soup.text())?.groupValues?.get(1)
@@ -127,7 +122,12 @@ class FrenchStreamProvider : MainAPI() {
                 addTrailer(soup.selectFirst("button#myBtn > a")?.attr("href"))
             }
         } else {
-
+            if ("<a" in (listEpisode[1]).toString()) {  // check if VF is empty
+                subEpisodes = listEpisode[1].takeEpisode(url) //  return vostfr
+            }
+            if ("<a" in (listEpisode[0]).toString()) {
+                dubEpisodes = listEpisode[0].takeEpisode(url)//  return vf
+            }
             val yearRegex = Regex("""Titre .* \/ (\d*)""")
             val year = yearRegex.find(soup.text())?.groupValues?.get(1)
             return newAnimeLoadResponse(
