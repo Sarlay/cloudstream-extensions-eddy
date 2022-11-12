@@ -2,6 +2,7 @@ package com.lagradost
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import org.jsoup.nodes.Element
@@ -116,42 +117,39 @@ class EmpirestreamingProvider : MainAPI() {
             )
         val jsonrep = html.parsed<SearchJson>()
         println(jsonrep)
-        val myList = mutableListOf<SearchResponse>()
-        jsonrep.data!!.series.forEach {
-            myList.add(
-                newAnimeSearchResponse(
-                    name = it.title.toString(),
-                    url = fixUrl(it.urlPath.toString()),
-                    type = TvType.TvSeries,
+        return jsonrep.data!!.series.map {
+            newAnimeSearchResponse(
+                name = it.title.toString(),
+                url = fixUrl(it.urlPath.toString()),
+                type = TvType.TvSeries,
 
-                    ) {
-                    this.posterUrl = fixUrl(it.symImage.toString())
-                    this.posterHeaders =
-                        interceptor.getCookieHeaders("$mainUrl").toMap()
-                    addDubStatus(
-                        isDub = it.versions.any { it.contains("vf") },
-                        episodes = null
-                    )
-                })
-        }
-        jsonrep.data!!.films.forEach {
-            myList.add(
-                newAnimeSearchResponse(
-                    name = it.title.toString(),
-                    url = fixUrl(it.urlPath.toString()),
-                    type = TvType.TvSeries,
+                ) {
+                this.posterUrl = fixUrl("/images/medias" + it.symImage!!.poster.toString())
+                this.posterHeaders =
+                    interceptor.getCookieHeaders("$mainUrl/api/views/search").toMap()
+                addDubStatus(
+                    isDub = it.versions.any { it.contains("vf") },
+                    episodes = null
+                )
+            }
+        } + jsonrep.data!!.films.map {
+            newAnimeSearchResponse(
+                name = it.title.toString(),
+                url = fixUrl(it.urlPath.toString()),
+                type = TvType.TvSeries,
 
-                    ) {
-                    this.posterUrl = fixUrl(it.symImage.toString())
-                    this.posterHeaders =
-                        interceptor.getCookieHeaders("$mainUrl/api/views/search").toMap()
-                    addDubStatus(
-                        isDub = it.versions.any { it.contains("vf") },
-                        episodes = null
-                    )
-                })
+                ) {
+                this.posterUrl =
+                    fixUrl("/images/medias" + it.symImage!!.poster.toString())
+                this.posterHeaders =
+                    interceptor.getCookieHeaders("$mainUrl/api/views/search").toMap()
+                addDubStatus(
+                    isDub = it.versions.any { it.contains("vf") },
+                    episodes = null
+                )
+            }
         }
-        return myList
+
     }
 
     /**
@@ -212,6 +210,12 @@ class EmpirestreamingProvider : MainAPI() {
 
     )
 
+    data class GetDistrion(
+
+        @JsonProperty("Distribution") var Distribution: ArrayList<Distribution> = arrayListOf()
+
+    )
+
     fun findVideolink(proprety: String?, code: String?): String {
         return when (proprety) {
             "voe" -> {
@@ -232,6 +236,22 @@ class EmpirestreamingProvider : MainAPI() {
         // url est le lien retourné par la fonction search (la variable href) ou la fonction getMainPage
         val subEpisodes = ArrayList<Episode>()
         val dubEpisodes = ArrayList<Episode>()
+        val distribution =
+            tryParseJson<GetDistrion>(
+                "{${
+                    Regex("""("Distribution\"\:[\s]*\[\{.*\}\]),[\s]*"Category""").find(html.text)?.groupValues?.get(
+                        1
+                    ) ?: ""
+                }}"
+            )?.Distribution?.map {
+                ActorData(
+                    Actor(
+                        it.name.toString(),
+                        fixUrl("/images/distributions" + it.image[0].path.toString())
+                    )
+                )
+            }
+
         val jsonText =
             Regex("""result[\s]+=([\s]+.*\}\]\})[\s]*;""").find(html.text)!!.groupValues.get(1)
         var dataUrl = url
@@ -244,7 +264,7 @@ class EmpirestreamingProvider : MainAPI() {
                         var addVid = ""
                         episodeJson.video.forEach { vid ->
                             if (vid.version == "vf") {
-                                var addVidVF =
+                                addVidVF =
                                     "$addVidVF&${findVideolink(vid.property, vid.code)}"
                                 dubEpisodes.add(
                                     Episode(
@@ -257,7 +277,7 @@ class EmpirestreamingProvider : MainAPI() {
                                     )
                                 )
                             } else {
-                                var addVid = "$addVid&${findVideolink(vid.property, vid.code)}"
+                                addVid = "$addVid&${findVideolink(vid.property, vid.code)}"
                                 subEpisodes.add(
                                     Episode(
                                         data = addVid,
@@ -331,6 +351,7 @@ class EmpirestreamingProvider : MainAPI() {
                 )
 
         }
+
         if (subEpisodes.isEmpty() && dubEpisodes.isEmpty()) {
 
             return newMovieLoadResponse(
@@ -346,6 +367,11 @@ class EmpirestreamingProvider : MainAPI() {
                 this.tags = tags
                 this.posterHeaders = interceptor.getCookieHeaders(url).toMap()
                 this.recommendations = recommendations
+                this.actors = distribution
+                addTrailer(
+                    "https://www.youtube.com/watch?v=" + document.select("button.action-see-more")
+                        .attr("data-trailer")
+                )
             }
         } else {
             return newAnimeLoadResponse(
@@ -359,6 +385,11 @@ class EmpirestreamingProvider : MainAPI() {
                 this.year = year
                 this.tags = tags
                 this.posterHeaders = interceptor.getCookieHeaders(url).toMap()
+                this.actors = distribution
+                addTrailer(
+                    "https://www.youtube.com/watch?v=" + document.select("button.action-see-more")
+                        .attr("data-trailer")
+                )
                 if (subEpisodes.isNotEmpty()) addEpisodes(
                     DubStatus.Subbed,
                     subEpisodes
@@ -367,7 +398,6 @@ class EmpirestreamingProvider : MainAPI() {
                     DubStatus.Dubbed,
                     dubEpisodes
                 )
-
             }
         }
     }
@@ -455,47 +485,10 @@ class EmpirestreamingProvider : MainAPI() {
         }
     }
 
-/*
-    data class SerieJson(
-
-        @JsonProperty("1") var serie: ArrayList<Serie> = arrayListOf()
-
-    )
-*/
-
-
     data class MovieJson(
 
-        /*   @JsonProperty("id") var id: Int? = null,
-           @JsonProperty("Banner") var Banner: Banner? = Banner(),
-           @JsonProperty("Titre") var Titre: String? = null,
-           @JsonProperty("TitreOriginal") var TitreOriginal: String? = null,
-           @JsonProperty("Description") var Description: String? = null,
-           @JsonProperty("Poster") var Poster: ArrayList<Poster> = arrayListOf(),
-           @JsonProperty("BackDrop") var BackDrop: ArrayList<BackDrop> = arrayListOf(),
-           @JsonProperty("YearProduct") var YearProduct: YearProduct? = YearProduct(),
-           @JsonProperty("Vote") var Vote: Int? = null,*/
         @JsonProperty("Iframe") var Iframe: ArrayList<Iframe> = arrayListOf(),
-        /*    @JsonProperty("Trailer") var Trailer: String? = null,
-            @JsonProperty("Country") var Country: ArrayList<String> = arrayListOf(),
-            @JsonProperty("Saga") var Saga: ArrayList<String> = arrayListOf(),
-            @JsonProperty("Univers") var Univers: ArrayList<Univers> = arrayListOf(),
-            @JsonProperty("Distribution") var Distribution: ArrayList<Distribution> = arrayListOf(),
-            @JsonProperty("Category") var Category: ArrayList<String> = arrayListOf(),
-            @JsonProperty("category_id") var categoryId: String? = null,
-            @JsonProperty("label") var label: String? = null,
-            @JsonProperty("Date") var Date: Date? = Date(),
-            @JsonProperty("CreatedAt") var CreatedAt: CreatedAt? = CreatedAt(),
-            @JsonProperty("Suggest") var Suggest: ArrayList<Suggest> = arrayListOf()*/
-
-    )
-
-    data class DateCreatedAt(
-
-        @JsonProperty("date") var date: String? = null,
-        @JsonProperty("timezone_type") var timezoneType: Int? = null,
-        @JsonProperty("timezone") var timezone: String? = null
-
+        @JsonProperty("Distribution") var Distribution: ArrayList<Distribution> = arrayListOf(),
     )
 
 
@@ -521,27 +514,6 @@ class EmpirestreamingProvider : MainAPI() {
     )
 
 
-    data class Banner(
-
-        @JsonProperty("id") var id: Int? = null,
-        @JsonProperty("title") var title: String? = null,
-        @JsonProperty("versions") var versions: ArrayList<String> = arrayListOf(),
-        @JsonProperty("dateCreatedAt") var dateCreatedAt: DateCreatedAt? = DateCreatedAt(),
-        @JsonProperty("description") var description: String? = null,
-        @JsonProperty("label") var label: String? = null,
-        @JsonProperty("image") var image: ArrayList<Image> = arrayListOf(),
-        @JsonProperty("season") var season: String? = null,
-        @JsonProperty("new_episode") var newEpisode: NewEpisode? = NewEpisode(),
-        @JsonProperty("sym_image") var symImage: SymImage? = SymImage(),
-        @JsonProperty("BackDrop") var BackDrop: ArrayList<BackDrop> = arrayListOf(),
-        @JsonProperty("note") var note: Int? = null,
-        @JsonProperty("createdAt") var createdAt: CreatedAt? = CreatedAt(),
-        @JsonProperty("path") var path: String? = null,
-        @JsonProperty("trailer") var trailer: String? = null,
-        @JsonProperty("urlPath") var urlPath: String? = null
-
-    )
-
     data class Poster(
 
         @JsonProperty("path") var path: String? = null,
@@ -563,25 +535,6 @@ class EmpirestreamingProvider : MainAPI() {
     )
 
 
-    data class Images(
-
-        @JsonProperty("path") var path: String? = null,
-        @JsonProperty("property") var property: String? = null,
-        @JsonProperty("size") var size: String? = null
-
-    )
-
-    data class Univers(
-
-        @JsonProperty("id") var id: Int? = null,
-        @JsonProperty("name") var name: String? = null,
-        @JsonProperty("image") var image: ArrayList<Image> = arrayListOf(),
-        @JsonProperty("images") var images: ArrayList<Images> = arrayListOf(),
-        @JsonProperty("path") var path: String? = null,
-        @JsonProperty("urlPath") var urlPath: String? = null
-
-    )
-
     data class Distribution(
 
         @JsonProperty("id") var id: Int? = null,
@@ -598,26 +551,6 @@ class EmpirestreamingProvider : MainAPI() {
 
     )
 
-    data class Suggest(
-
-        @JsonProperty("id") var id: Int? = null,
-        @JsonProperty("title") var title: String? = null,
-        @JsonProperty("versions") var versions: ArrayList<String> = arrayListOf(),
-        @JsonProperty("season") var season: String? = null,
-        @JsonProperty("new_episode") var newEpisode: NewEpisode? = NewEpisode(),
-        @JsonProperty("dateCreatedAt") var dateCreatedAt: DateCreatedAt? = DateCreatedAt(),
-        @JsonProperty("image") var image: ArrayList<Image> = arrayListOf(),
-        @JsonProperty("note") var note: Int? = null,
-        @JsonProperty("createdAt") var createdAt: CreatedAt? = CreatedAt(),
-        @JsonProperty("label") var label: String? = null,
-        @JsonProperty("sym_image") var symImage: SymImage? = SymImage(),
-        @JsonProperty("path") var path: String? = null,
-        @JsonProperty("description") var description: String? = null,
-        @JsonProperty("trailer") var trailer: String? = null,
-        @JsonProperty("urlPath") var urlPath: String? = null
-
-    )
-
     suspend fun avoidCloudflare(url: String): NiceResponse {
         return app.get(url, interceptor = interceptor)
     }
@@ -631,52 +564,19 @@ class EmpirestreamingProvider : MainAPI() {
     override val mainPage = mainPageOf(
         Pair(
             "$mainUrl/univer/netflix-en-streaming-hd/8",
-            "\uD83C\uDDF3\u200C\uD83C\uDDEA\u200C\uD83C\uDDF9\u200C\uD83C\uDDEB\u200C\uD83C\uDDF1\u200C\uD83C\uDDEE\u200C\uD83C\uDDFD\u200C \n" + "⣶⡄⠀⣶⠀⢰⣶⣶⡆⠠⣶⣶⣶⡆⢰⣶⣶⣦⠀⣶⠀⠀⠀⣶⡆⠐⣶⠀⣰⡖\n" +
-                    "⣿⣷⡀⣿⠀⣸⣇⣀⡀⠀⠀⣿⠀⠀⢸⣇⣀⡀⠀⣿⠀⠀⠀⣿⡇⠀⠹⣷⡿⠁\n" +
-                    "⣿⡿⣷⣿⠀⣿⡟⠛⠁⠀⠀⣿⠀⠀⢸⡏⠉⠁⠀⣿⠀⠀⠀⣿⡇⠀⢠⣿⣇⠀\n" +
-                    "⣿⡇⢻⣿⠀⣿⣷⣶⡆⠀⠀⠿⠀⠀⠸⠇⠀⠀⠀⣿⣶⣶⠀⣿⡇⢀⣿⠋⢿⡆\n" +
-                    "⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉"
+            "\uD83C\uDD7D\uD83C\uDD74\uD83C\uDD83\uD83C\uDD75\uD83C\uDD7B\uD83C\uDD78\uD83C\uDD87"
         ),
         Pair(
             "$mainUrl/univer/Walt-Disney-Pictures-en-streaming-hd/12",
-            "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⠶⠒⠒⠒⠒⠒⠲⠦⢄⣀⠀⠀⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⠀⠀⣠⠖⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠓⢦⡀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⢠⠞⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⠀⠀⠀⠀\n" +
-                    "⠔⠚⠛⠳⠶⢤⣀⠀⠀⠀⣠⣤⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢳⡀⠀⠀\n" +
-                    "⠀⠀⠀⠀⡆⠀⠈⠙⢦⡘⠾⠵⠊⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣥⠀⠀\n" +
-                    "⠀⠠⠖⠒⣿⠛⠲⡆⠈⣿⢰⠰⣾⣍⡉⢰⣆⢻⢐⣟⡛⢰⣣⡖⡆⢠⣤⣿⣤⣤\n" +
-                    "⠀⠀⠑⠤⣿⣀⣀⣤⡴⠋⠸⠘⠩⠽⠞⠻⠈⠛⠸⡶⠖⣸⡿⠞⠁⠀⠀⠼⠀⠀\n" +
-                    "⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡟⠀⠀⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀"
+            "\uD83C\uDD73\uD83C\uDD78\uD83C\uDD82\uD83C\uDD7D\uD83C\uDD74\uD83C\uDD88 +"
         ),
         Pair(
             "$mainUrl/univer/Amazon-prime-video-en-streaming-hd/10",
-            "⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣤⣶⣶⣶⣶⣤⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⠏⠉⠀⠈⠙⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⠈⠉⠉⠉⠉⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⠀⠀⢀⣤⣤⣶⣶⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⠿⠛⠋⠉⣿⣿⣿⣿⣿ mazon Prime⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⣾⣿⣿⣿⣿⠁⠀⠀⠀⠀⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⡀⠀⠀⠀⣸⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣶⣶⣿⣿⡿⣿⣿⣿⣿⣿⠆⠀⠀⠀⠀\n" +
-                    "⠠⣀⠀⠀⠀⠀⠙⠿⢿⣿⣿⣿⡿⠟⠋⠀⠙⢿⡿⠋⠀⠠⠴⠶⣶⡄\n" +
-                    "⠀⠈⠛⠶⣦⣄⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣠⣤⠶⠀⣿⠁\n" +
-                    "⠀⠀⠀⠀⠈⠙⠛⠿⢿⣿⣷⣶⣶⣶⣶⣶⣿⡿⠟⠛⠉⠁⠀⠐⠁⠀"
+            "\uD83C\uDD70\uD83C\uDD7C\uD83C\uDD70\uD83C\uDD89\uD83C\uDD7E\uD83C\uDD7D \uD83C\uDD7F\uD83C\uDD81\uD83C\uDD78\uD83C\uDD7C\uD83C\uDD74"
         ),
         Pair(
             "$mainUrl/univer/Apple-Tv-en-streaming-hd/15",
-                    "⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷\n" +
-                    "⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠟⠉⢹⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠁⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣿⡿⠟⠛⠿⣿⡿⠿⠛⠿⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿ Apple Tv\n" +
-                    "⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣿⣷⣤⣀⣤⣴⣦⣄⣠⣴⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿"
+            "\uD83C\uDD70\uD83C\uDD7F\uD83C\uDD7F\uD83C\uDD7B\uD83C\uDD74 \uD83C\uDF4E \uD83C\uDD83\uD83C\uDD85"
         ),
     )
 
