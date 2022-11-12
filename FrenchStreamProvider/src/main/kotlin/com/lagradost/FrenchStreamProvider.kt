@@ -123,10 +123,10 @@ class FrenchStreamProvider : MainAPI() {
                 addTrailer(soup.selectFirst("button#myBtn > a")?.attr("href"))
             }
         } else {
-            if ("<a" in (listEpisode[1]).toString()) {  // check if VF is empty
+            if ("<a" in listEpisode[1].toString()) {  // check if VF is empty
                 subEpisodes = listEpisode[1].takeEpisode(url) //  return vostfr
             }
-            if ("<a" in (listEpisode[0]).toString()) {
+            if ("<a" in listEpisode[0].toString()) {
                 dubEpisodes = listEpisode[0].takeEpisode(url)//  return vf
             }
             val yearRegex = Regex("""Titre .* \/ (\d*)""")
