@@ -98,6 +98,7 @@ class FrenchStreamProvider : MainAPI() {
         var subEpisodes = mutableListOf<Episode>()
         var dubEpisodes = mutableListOf<Episode>()
         val title = soup.selectFirst("h1#s-title")!!.text().toString()
+        val isMovie = !url.contains("/serie/", ignoreCase = true)
         val description =
             soup.selectFirst("div.fdesc")!!.text().toString()
                 .split("streaming", ignoreCase = true)[1].replace(":", "")
@@ -106,7 +107,7 @@ class FrenchStreamProvider : MainAPI() {
         val tags = soup.select("ul.flist-col > li").getOrNull(1)
         //val rating = soup.select("span[id^=vote-num-id]")?.getOrNull(1)?.text()?.toInt()
 
-        if (subEpisodes.isEmpty() && dubEpisodes.isEmpty()) {
+        if (isMovie) {
             val yearRegex = Regex("""ate de sortie\: (\d*)""")
             val year = yearRegex.find(soup.text())?.groupValues?.get(1)
             val tagsList = tags?.select("a")
