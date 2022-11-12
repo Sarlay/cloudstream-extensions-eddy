@@ -9,7 +9,7 @@ import me.xdrop.fuzzywuzzy.FuzzySearch
 import okhttp3.Interceptor
 
 class PickTV : MainAPI() {
-    override var mainUrl = "http"
+    override var mainUrl = "https://github.com"
     val urlmain =
         "https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/trickylist.json"
     override var name = "MyPickTV"
@@ -96,7 +96,7 @@ class PickTV : MainAPI() {
         var flag = ""
         val arraymediaPlaylist = tryParseJson<ArrayList<mediaData>>(app.get(urlmain).text)!!
         for (media in arraymediaPlaylist) {
-            if (url == media.url) {
+            if (url.replace(mainUrl, "") == media.url) {
                 link = media.url
                 title = media.title
                 flag = getFlag(media.lang.toString())
@@ -255,7 +255,7 @@ class PickTV : MainAPI() {
     ): Boolean {
         var isM3u = false
         var link: String = data
-        var invokeHeader = mapOf<String, String>()
+        val invokeHeader = mapOf<String, String>()
         var refer: String = ""
         when (true) {
             (data.contains("m3u") && data.contains("webudi.openhd")) -> {
@@ -434,7 +434,7 @@ class PickTV : MainAPI() {
                             }
                         LiveSearchResponse(
                             groupName,
-                            media.url,
+                            media.url + mainUrl,
                             name,
                             TvType.Live,
                             posterUrl,
@@ -476,4 +476,5 @@ class PickTV : MainAPI() {
             .replace("""HD""", "").replace(findCountryId("FR|AF"), "").trim()
     }
 }
+
 

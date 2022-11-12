@@ -17,7 +17,7 @@ class EmpirestreamingProvider : MainAPI() {
 
 
     override var mainUrl = "https://empire-streaming.co"
-    override var name = "Empire-Streaming"
+    override var name = "\uD83D\uDC51 Empire-Streaming \uD83D\uDC51"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
     override var lang = "fr" // fournisseur est en francais
@@ -564,46 +564,20 @@ class EmpirestreamingProvider : MainAPI() {
     override val mainPage = mainPageOf(
         Pair(
             "$mainUrl/univer/netflix-en-streaming-hd/8",
-            "\uD83C\uDDF3\u200C\uD83C\uDDEA\u200C\uD83C\uDDF9\u200C\uD83C\uDDEB\u200C\uD83C\uDDF1\u200C\uD83C\uDDEE\u200C\uD83C\uDDFD\u200C \n" +
-                    "███╗░░██╗███████╗████████╗███████╗██╗░░░░░██╗██╗░░██╗\n" +
-                    "████╗░██║██╔════╝╚══██╔══╝██╔════╝██║░░░░░██║╚██╗██╔╝\n" +
-                    "██╔██╗██║█████╗░░░░░██║░░░█████╗░░██║░░░░░██║░╚███╔╝░\n" +
-                    "██║╚████║██╔══╝░░░░░██║░░░██╔══╝░░██║░░░░░██║░██╔██╗░\n" +
-                    "██║░╚███║███████╗░░░██║░░░██║░░░░░███████╗██║██╔╝╚██╗\n" +
-                    "╚═╝░░╚══╝╚══════╝░░░╚═╝░░░╚═╝░░░░░╚══════╝╚═╝╚═╝░░╚═╝"
+            "\uD83C\uDDF3\u200C\uD83C\uDDEA\u200C\uD83C\uDDF9\u200C\uD83C\uDDEB\u200C\uD83C\uDDF1\u200C\uD83C\uDDEE\u200C\uD83C\uDDFD\u200C"
+
         ),
         Pair(
             "$mainUrl/univer/Walt-Disney-Pictures-en-streaming-hd/12",
-                  "██████╗░██╗░██████╗███╗░░██╗███████╗██╗░░░██╗\n" +
-                  "██╔══██╗██║██╔════╝████╗░██║██╔════╝╚██╗░██╔╝\n" +
-                  "██║░░██║██║╚█████╗░██╔██╗██║█████╗░░░╚████╔╝░\n" +
-                  "██║░░██║██║░╚═══██╗██║╚████║██╔══╝░░░░╚██╔╝░░\n" +
-                  "██████╔╝██║██████╔╝██║░╚███║███████╗░░░██║░░░\n" +
-                  "╚═════╝░╚═╝╚═════╝░╚═╝░░╚══╝╚══════╝░░░╚═╝░░░"
+              "\uD83C\uDDE9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEE\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFE\u200B\u200B\u200B\u200B\u200B +"
         ),
         Pair(
             "$mainUrl/univer/Amazon-prime-video-en-streaming-hd/10",
-           "\n" +
-                   "░█████╗░███╗░░░███╗░█████╗░███████╗░█████╗░███╗░░██╗\n" +
-                   "██╔══██╗████╗░████║██╔══██╗╚════██║██╔══██╗████╗░██║\n" +
-                   "███████║██╔████╔██║███████║░░███╔═╝██║░░██║██╔██╗██║\n" +
-                   "██╔══██║██║╚██╔╝██║██╔══██║██╔══╝░░██║░░██║██║╚████║\n" +
-                   "██║░░██║██║░╚═╝░██║██║░░██║███████╗╚█████╔╝██║░╚███║\n" +
-                   "╚═╝░░╚═╝╚═╝░░░░░╚═╝╚═╝░░╚═╝╚══════╝░╚════╝░╚═╝░░╚══╝"
+      "ⓐⓜⓐⓩⓞⓝ \uD83C\uDDF5\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEE\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF2\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B"
         ),
         Pair(
-            "$mainUrl/univer/Apple-Tv-en-streaming-hd/15",
-            "⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷\n" +
-                    "⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠟⠉⢹⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠁⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣿⡿⠟⠛⠿⣿⡿⠿⠛⠿⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣿⣷⣤⣀⣤⣴⣦⣄⣠⣴⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿\n" +
-                    "⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿"
+            "$mainUrl/univer/Apple-Tv-en-streaming-hd/15","\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF5\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF5\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF1\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B \uD83D\uDCFA"
+
         ),
     )
 
@@ -621,6 +595,7 @@ class EmpirestreamingProvider : MainAPI() {
     }
 
 }
+
 
 
 

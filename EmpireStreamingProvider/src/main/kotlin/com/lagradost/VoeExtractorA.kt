@@ -7,7 +7,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
 
 open class VoeExtractorA : ExtractorApi() {
-    override val name: String = "Voe"
+    override val name: String = "Voe_Sx"
     override val mainUrl: String = "https://voe.sx"
     override val requiresReferer = false
 
