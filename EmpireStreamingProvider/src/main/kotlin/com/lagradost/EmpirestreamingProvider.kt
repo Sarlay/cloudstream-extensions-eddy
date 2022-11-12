@@ -127,7 +127,7 @@ class EmpirestreamingProvider : MainAPI() {
                     ) {
                     this.posterUrl = fixUrl(it.symImage.toString())
                     this.posterHeaders =
-                        interceptor.getCookieHeaders("$mainUrl/api/views/search").toMap()
+                        interceptor.getCookieHeaders("$mainUrl").toMap()
                     addDubStatus(
                         isDub = it.versions.any { it.contains("vf") },
                         episodes = null
@@ -361,11 +361,11 @@ class EmpirestreamingProvider : MainAPI() {
                 this.posterHeaders = interceptor.getCookieHeaders(url).toMap()
                 if (subEpisodes.isNotEmpty()) addEpisodes(
                     DubStatus.Subbed,
-                    subEpisodes.asReversed()
+                    subEpisodes
                 )
                 if (dubEpisodes.isNotEmpty()) addEpisodes(
                     DubStatus.Dubbed,
-                    dubEpisodes.asReversed()
+                    dubEpisodes
                 )
 
             }
@@ -656,23 +656,22 @@ class EmpirestreamingProvider : MainAPI() {
                     "⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⠏⠉⠀⠈⠙⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀\n" +
                     "⠀⠀⠀⠀⠀⠈⠉⠉⠉⠉⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀\n" +
                     "⠀⠀⠀⠀⠀⠀⠀⢀⣤⣤⣶⣶⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀\n" +
-                    "⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⠿⠛⠋⠉⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀\n" +
+                    "⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⠿⠛⠋⠉⣿⣿⣿⣿⣿ mazon Prime⠀⠀⠀⠀⠀⠀\n" +
                     "⠀⠀⠀⠀⠀⣾⣿⣿⣿⣿⠁⠀⠀⠀⠀⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀\n" +
                     "⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⡀⠀⠀⠀⣸⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀\n" +
                     "⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣶⣶⣿⣿⡿⣿⣿⣿⣿⣿⠆⠀⠀⠀⠀\n" +
                     "⠠⣀⠀⠀⠀⠀⠙⠿⢿⣿⣿⣿⡿⠟⠋⠀⠙⢿⡿⠋⠀⠠⠴⠶⣶⡄\n" +
                     "⠀⠈⠛⠶⣦⣄⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣠⣤⠶⠀⣿⠁\n" +
-                    "⠀⠀⠀⠀⠈⠙⠛⠿⢿⣿⣷⣶⣶⣶⣶⣶⣿⡿⠟⠛⠉⠁⠀⠐⠁⠀mazon Prime"
+                    "⠀⠀⠀⠀⠈⠙⠛⠿⢿⣿⣷⣶⣶⣶⣶⣶⣿⡿⠟⠛⠉⠁⠀⠐⠁⠀"
         ),
         Pair(
-            "$mainUrl/univer/Apple-Tv-en-streaming-hd/15", "Apple Tv \n" +
-                    " " +
+            "$mainUrl/univer/Apple-Tv-en-streaming-hd/15",
                     "⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷\n" +
                     "⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠟⠉⢹⣿⣿⣿⣿⣿⣿⣿\n" +
                     "⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠁⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿\n" +
                     "⣿⣿⣿⣿⣿⣿⡿⠟⠛⠿⣿⡿⠿⠛⠿⣿⣿⣿⣿⣿⣿⣿\n" +
                     "⣿⣿⣿⣿⣿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⣿⣿⣿⣿⣿\n" +
-                    "⣿⣿⣿⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿\n" +
+                    "⣿⣿⣿⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿ Apple Tv\n" +
                     "⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣿⣿⣿⣿⣿⣿\n" +
                     "⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣿⣿⣿⣿⣿⣿\n" +
                     "⣿⣿⣿⣿⣿⣿⣷⣤⣀⣤⣴⣦⣄⣠⣴⣿⣿⣿⣿⣿⣿⣿\n" +
@@ -695,5 +694,6 @@ class EmpirestreamingProvider : MainAPI() {
     }
 
 }
+
 
 
