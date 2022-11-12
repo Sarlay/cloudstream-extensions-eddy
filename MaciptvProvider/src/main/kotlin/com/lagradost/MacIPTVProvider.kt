@@ -167,7 +167,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
         return LiveStreamLoadResponse(
             name = title,
-            url = link,
+            url = media.toJson(),
             apiName = this.name,
             dataUrl = link,
             posterUrl = posterUrl,
