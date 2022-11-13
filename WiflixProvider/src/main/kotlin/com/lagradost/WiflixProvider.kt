@@ -11,6 +11,7 @@ import kotlin.collections.ArrayList
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.NiceResponse
 import kotlinx.coroutines.runBlocking
+import java.util.*
 
 
 class WiflixProvider : MainAPI() {
@@ -103,7 +104,7 @@ class WiflixProvider : MainAPI() {
 
             episodes.add(
                 Episode(
-                    link + if (duborSub=="vostfr") {
+                    link + if (duborSub == "vostfr") {
                         "*$duborSub*"
                     } else {
                         ""
@@ -190,7 +191,13 @@ class WiflixProvider : MainAPI() {
                 name = title,
                 url = url,
                 type = TvType.Movie,
-                dataUrl = url
+                dataUrl = url + if (document.select("span[itemprop*=\"inLanguage\"]").text()
+                        .contains("vostfr", true)
+                ) {
+                    "*vostfr*"
+                } else {
+                    ""
+                }
 
             ) {
                 this.posterUrl = fixUrl(posterUrl)
@@ -229,14 +236,17 @@ class WiflixProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
         var isvostfr = false
+        val trueUrl: String
         val parsedInfo = if (data.takeLast(8) == "*vostfr*") {
             isvostfr = true
-            tryParseJson<EpisodeData>(data.dropLast(6))
+            trueUrl = data.dropLast(8)
+            tryParseJson<EpisodeData>(data.dropLast(8))
         } else {
+            trueUrl = data
             tryParseJson<EpisodeData>(data)
         }
 
-        val url = parsedInfo?.url ?: data
+        val url = parsedInfo?.url ?: trueUrl
 
         val numeroEpisode = parsedInfo?.episodeNumber
 
@@ -257,7 +267,7 @@ class WiflixProvider : MainAPI() {
             "div.linkstab > a"
         }
 
-        if (cssCodeForPlayer.contains("vs")) {
+        if (cssCodeForPlayer.contains("vs") || isvostfr) {
             flag = " \uD83D\uDCDC \uD83C\uDDEC\uD83C\uDDE7"
         }
 
@@ -310,15 +320,20 @@ class WiflixProvider : MainAPI() {
             }
         )
         if (type.contains("film")) {
-            return MovieSearchResponse(
+            return newAnimeSearchResponse(
                 name = title,
                 url = link,
-                apiName = title,
                 type = TvType.Movie,
-                posterUrl = posterUrl,
-                quality = quality
 
-            )
+            ){this.dubStatus=if (select("span.nbloc1").text().contains("vostfr",true)) {
+                EnumSet.of(DubStatus.Subbed)
+            } else {
+                EnumSet.of(DubStatus.Dubbed)
+            }
+                this.posterUrl = posterUrl
+                this.quality = quality
+
+            }
 
 
         } else  // an Serie
@@ -383,4 +398,3 @@ class WiflixProvider : MainAPI() {
     }
 
 }
-
