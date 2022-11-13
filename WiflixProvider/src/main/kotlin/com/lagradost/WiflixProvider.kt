@@ -28,7 +28,19 @@ class WiflixProvider : MainAPI() {
     init {
         runBlocking {
             try {
-                app.get(mainUrl)
+                val document = app.get(mainUrl).document
+                val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
+                if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("wiflix")) {
+                    mainUrl = newMainUrl
+                } else {
+                    val data =
+                        tryParseJson<ArrayList<FrenchStreamProvider.mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
+                    data.forEach {
+                        if (it.title.lowercase().contains("wiflix")) {
+                            mainUrl = it.url
+                        }
+                    }
+                }
             } catch (e: Exception) { // url changed
                 val data =
                     tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
