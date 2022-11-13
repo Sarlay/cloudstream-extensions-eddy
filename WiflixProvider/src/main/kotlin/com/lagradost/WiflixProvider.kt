@@ -34,7 +34,7 @@ class WiflixProvider : MainAPI() {
                     mainUrl = newMainUrl
                 } else {
                     val data =
-                        tryParseJson<ArrayList<FrenchStreamProvider.mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
+                        tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
                     data.forEach {
                         if (it.title.lowercase().contains("wiflix")) {
                             mainUrl = it.url
@@ -383,5 +383,4 @@ class WiflixProvider : MainAPI() {
     }
 
 }
-
 
