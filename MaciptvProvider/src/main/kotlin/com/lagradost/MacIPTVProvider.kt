@@ -154,6 +154,17 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
 
     override suspend fun load(url: String): LoadResponse {
+        if (url.contains("I_Need_Help")) {
+            return LiveStreamLoadResponse(
+                name = "GO TO CREATE YOUR \uD83C\uDDF9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B ACCOUNT => italia|sport|crime|uk ",
+                url = url,
+                apiName = this.name,
+                dataUrl = url,
+                posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
+                plot = "ALL TAGS \uD83D\uDD0E ${allCategory.sortedBy { it }}",
+                comingSoon = true
+            )
+        }
         val media = parseJson<Channel>(url.replace(mainUrl, ""))
         val epg_url =
             "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${media.ch_id}&size=10&JsHttpRequest=1-xml" // plot
@@ -384,7 +395,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
     )
 
     private var codeCountry = lang
-
+    var allCategory = mutableListOf<String>()
     val rgxcodeCountry = findKeyWord(codeCountry)
     var isNotInit = true
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -455,9 +466,22 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         fun getHomePageListsInit(provider: MacIPTVProvider): List<HomePageList> {
             val rgxcodeCountry = provider.rgxcodeCountry
             var firstCat = true
-            return responseGetGenretoJSON.mapNotNull { js ->
+            provider.allCategory.clear()
+            
+            return getHelpHomePage(provider) + responseGetGenretoJSON.mapNotNull { js ->
                 val idGenre = js.id.toString()
                 val categoryTitle = js.title.toString()
+                cleanTitle(
+                    categoryTitle.replace("&", "").replace(",", "").replace(":", "")
+                        .replace("#", "").replace("|", "").replace("*", "").replace("/", "")
+                        .replace("\\", "").replace("[", "").replace("]", "")
+                        .replace("(", "").replace(")", "")
+                ).split("""\s+""".toRegex()).forEach { titleC ->
+                    if (!provider.allCategory.any { it.contains(titleC, true) }) {
+                        provider.allCategory.add("|$titleC|")
+                    }
+                }
+
                 val arraychannel = mutableListOf<Channel>()
                 if (channels.isNotEmpty() && idGenre.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
                         .contains(rgxcodeCountry) ||
@@ -520,13 +544,14 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     null
                 }
             }
+
         }
 
         fun getHomePageListsFromArrayChannel(provider: MacIPTVProvider): List<HomePageList> {
             val rgxcodeCountry = provider.rgxcodeCountry
             var firstCat = true
             val arrayChannel = provider.arraymediaPlaylist.toMutableList()
-            return responseGetGenretoJSON.mapNotNull { js ->
+            return getHelpHomePage(provider) + responseGetGenretoJSON.mapNotNull { js ->
                 val idGenre = js.id.toString()
                 val categoryTitle = js.title.toString()
                 val flag: String
@@ -556,6 +581,30 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     null
                 }
             }
+        }
+
+        fun getHelpHomePage(provider: MacIPTVProvider): List<HomePageList> {
+            val arraychannel = mutableListOf<Channel>()
+            val helpCat =
+                "\uD83C\uDDF9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B Account"
+            arraychannel.add(
+                Channel(
+                    "\uD83D\uDD0E TAG",
+                    "${provider.mainUrl}I_Need_Help",
+                    "https://userguiding.com/wp-content/uploads/2021/06/best-help-center-software.jpg",
+                    "",
+                    "000976000",
+                    "0097600",
+                    ""
+                )
+            )
+            return mutableListOf(
+                arraychannel.toHomePageList(
+                    helpCat,
+                    provider,
+                    "0097600"
+                )
+            )
         }
 
     }
@@ -666,3 +715,4 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     }
 }
+
