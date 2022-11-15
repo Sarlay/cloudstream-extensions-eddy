@@ -30,7 +30,7 @@ class MacIptvAPI(index: Int) : InAppAuthAPIManager(index) {
     }
 
     override suspend fun login(data: InAppAuthAPI.LoginData): Boolean {
-        if (data.server.isNullOrBlank() || !data.password?.contains("""(([0-9A-Za-z]{2}[:-]){5}[0-9A-Za-z]{2})""".toRegex())!!) return false // we require a server
+        if (data.server.isNullOrBlank() || !data.password?.contains("""(([0-9A-Za-z]{2}[:-]){5}[0-9A-Za-z]{2})""".toRegex())!!) return false // we require a server and a mac address
         switchToNewAccount()
         setKey(accountId, IPTVBOX_USER_KEY, data)
         registerAccount()
