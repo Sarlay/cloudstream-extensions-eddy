@@ -715,4 +715,3 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     }
 }
-
