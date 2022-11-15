@@ -72,6 +72,12 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         if (tags?.uppercase()?.trim() == "NONE" || tags?.isBlank() == true) tags = lang
         tags = tags?.uppercase()
         mainUrl = overrideUrl.toString()
+        mainUrl = when (true) { // the "c" is not needed and some provider doesn't work with it
+            mainUrl.endsWith("/c/") -> mainUrl.dropLast(3)
+            mainUrl.endsWith("/c") -> mainUrl.dropLast(2)
+            mainUrl.endsWith("/") -> mainUrl.dropLast(1)
+            else -> mainUrl
+        }
         headerMac = when {
             accountInfoNotGood(mainUrl, loginMac) -> { // do this if mainUrl or mac adresse is blank
                 mainUrl = defaultmainUrl
@@ -109,12 +115,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                 }
             }
         }
-        mainUrl = when (true) { // the "c" is not needed and some provider doesn't work with it
-            mainUrl.endsWith("/c/") -> mainUrl.dropLast(3)
-            mainUrl.endsWith("/c") -> mainUrl.dropLast(2)
-            mainUrl.endsWith("/") -> mainUrl.dropLast(1)
-            else -> mainUrl
-        }
+
         app.get(
             "$mainUrl/portal.php?type=stb&action=get_modules",
             headers = headerMac
