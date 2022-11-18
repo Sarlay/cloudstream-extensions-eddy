@@ -10,13 +10,10 @@ import org.jsoup.select.Elements
 import kotlin.collections.ArrayList
 import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.NiceResponse
-import kotlinx.coroutines.runBlocking
 import java.util.*
 
 
 class WiflixProvider : MainAPI() {
-
-
     override var mainUrl = "https://wiflix.cafe"
     override var name = "Wiflix"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
@@ -25,34 +22,34 @@ class WiflixProvider : MainAPI() {
     override val supportedTypes =
         setOf(TvType.Movie, TvType.TvSeries) // series, films
     private val interceptor = CloudflareKiller()
+    private var isNotInit = true
 
-    init {
-        runBlocking {
-            try {
-                val document = app.get(mainUrl).document
-                val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
-                if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("wiflix")) {
-                    mainUrl = newMainUrl
-                } else {
-                    val data =
-                        tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
-                    data.forEach {
-                        if (it.title.lowercase().contains("wiflix")) {
+    suspend fun initMainUrl() {
+        try {
+            val document = avoidCloudflare(mainUrl).document
+            val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
+            if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("wiflix")) { // allow to find the redirect url if it's changed
+                mainUrl = newMainUrl
+            } else {
+                // i don't know why but clone feature seems not to work with wiflix then get the url from a file
+                app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json")
+                    .parsed<ArrayList<mediaData>>().forEach {
+                        if (it.title.contains("wiflix", ignoreCase = true)) {
                             mainUrl = it.url
                         }
                     }
-                }
-            } catch (e: Exception) { // url changed
-                val data =
-                    tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
-                data.forEach {
-                    if (it.title.lowercase().contains("wiflix")) {
+            }
+        } catch (e: Exception) { // url changed
+            app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json")
+                .parsed<ArrayList<mediaData>>().forEach {
+                    if (it.title.contains("wiflix", ignoreCase = true)) {
                         mainUrl = it.url
                     }
                 }
 
-            }
         }
+        if (mainUrl.endsWith("/")) mainUrl.dropLast(1)
+        isNotInit = false
     }
 
     /**
@@ -325,11 +322,12 @@ class WiflixProvider : MainAPI() {
                 url = link,
                 type = TvType.Movie,
 
-            ){this.dubStatus=if (select("span.nbloc1").text().contains("vostfr",true)) {
-                EnumSet.of(DubStatus.Subbed)
-            } else {
-                EnumSet.of(DubStatus.Dubbed)
-            }
+                ) {
+                this.dubStatus = if (select("span.nbloc1").text().contains("vostfr", true)) {
+                    EnumSet.of(DubStatus.Subbed)
+                } else {
+                    EnumSet.of(DubStatus.Dubbed)
+                }
                 this.posterUrl = posterUrl
                 this.quality = quality
 
@@ -374,15 +372,16 @@ class WiflixProvider : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        Pair("$mainUrl/films-prochainement/page/", "Film Prochainement en Streaming"),
-        Pair("$mainUrl/film-en-streaming/page/", "Top Films cette année"),
-        Pair("$mainUrl/serie-en-streaming/page/", "Top Séries cette année"),
-        Pair("$mainUrl/saison-complete/page/", "Les saisons complètes"),
-        Pair("$mainUrl/film-ancien/page/", "Film zahalé (ancien)")
+        Pair("/films-prochainement/page/", "Film Prochainement en Streaming"),
+        Pair("/film-en-streaming/page/", "Top Films cette année"),
+        Pair("/serie-en-streaming/page/", "Top Séries cette année"),
+        Pair("/saison-complete/page/", "Les saisons complètes"),
+        Pair("/film-ancien/page/", "Film zahalé (ancien)")
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = request.data + page
+        if (isNotInit) initMainUrl()
+        val url = mainUrl + request.data + page
         val document =
             avoidCloudflare(url).document
 
@@ -398,3 +397,4 @@ class WiflixProvider : MainAPI() {
     }
 
 }
+
