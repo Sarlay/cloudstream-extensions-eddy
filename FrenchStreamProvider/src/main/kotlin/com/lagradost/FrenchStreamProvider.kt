@@ -4,10 +4,8 @@ package com.lagradost
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.extractorApis
-import kotlinx.coroutines.runBlocking
 import org.jsoup.nodes.Element
 
 
@@ -18,34 +16,35 @@ class FrenchStreamProvider : MainAPI() {
     override val hasMainPage = true
     override var lang = "fr"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
+    private var isNotInit = true
 
-    init {
-        runBlocking {
-            try {
-                val document = app.get(mainUrl).document
-                val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
-                if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("french-stream")) {
-                    mainUrl = newMainUrl
-                } else {
-                    val data =
-                        AppUtils.tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
-                    data.forEach {
-                        if (it.title.lowercase().contains("french-stream")) {
+    suspend fun initMainUrl() {
+        try {
+            val document = app.get(mainUrl).document
+            val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
+            if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("french-stream")) {
+                mainUrl = newMainUrl
+            } else {
+                // if the clone feature didn't work with then get the url from a file
+
+                app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json")
+                    .parsed<ArrayList<mediaData>>().forEach {
+                        if (it.title.contains("french-stream", ignoreCase = true)) {
                             mainUrl = it.url
                         }
                     }
-                }
-            } catch (e: Exception) { // url changed
-                val data =
-                    AppUtils.tryParseJson<ArrayList<mediaData>>(app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json").text)!!
-                data.forEach {
-                    if (it.title.lowercase().contains("french-stream")) {
+            }
+        } catch (e: Exception) { // url changed
+            app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json")
+                .parsed<ArrayList<mediaData>>().forEach {
+                    if (it.title.contains("french-stream", ignoreCase = true)) {
                         mainUrl = it.url
                     }
                 }
 
-            }
         }
+        if (mainUrl.endsWith("/")) mainUrl.dropLast(1)
+        isNotInit = false
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -63,7 +62,7 @@ class FrenchStreamProvider : MainAPI() {
 
     private fun Element.takeEpisode(
         url: String,
-    ): MutableList<Episode> {
+    ): List<Episode> {
         return this.select("a").map { a ->
             val epNum =
                 Regex("""pisode[\s]+(\d+)""").find(a.text().lowercase())?.groupValues?.get(1)
@@ -90,13 +89,13 @@ class FrenchStreamProvider : MainAPI() {
                 epNum,
                 a.selectFirst("div.fposter > img")?.attr("src"),
             )
-        }.toMutableList()
+        }
     }
 
     override suspend fun load(url: String): LoadResponse {
         val soup = app.get(url).document
-        var subEpisodes = mutableListOf<Episode>()
-        var dubEpisodes = mutableListOf<Episode>()
+        var subEpisodes = listOf<Episode>()
+        var dubEpisodes = listOf<Episode>()
         val title = soup.selectFirst("h1#s-title")!!.text().toString()
         val isMovie = !url.contains("/serie/", ignoreCase = true)
         val description =
@@ -124,7 +123,7 @@ class FrenchStreamProvider : MainAPI() {
             }
         } else {
             if ("<a" in listEpisode[1].toString()) {  // check if VF is empty
-                subEpisodes = listEpisode[1].takeEpisode(url) //  return vostfr
+                subEpisodes = listEpisode[1].takeEpisode(url)//  return vostfr
             }
             if ("<a" in listEpisode[0].toString()) {
                 dubEpisodes = listEpisode[0].takeEpisode(url)//  return vf
@@ -172,7 +171,7 @@ class FrenchStreamProvider : MainAPI() {
         val servers =
             if (data.contains("-episodenumber:"))// It's a serie:
             {
-                val isvostfr = data.takeLast(8) == "*vostfr*"
+                val isvostfr = data.endsWith("*vostfr*")
 
                 val split =
                     if (isvostfr) {
@@ -334,18 +333,19 @@ class FrenchStreamProvider : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-        Pair("$mainUrl/xfsearch/version-film/page/", "Derniers films"),
-        Pair("$mainUrl/xfsearch/version-serie/page/", "Derniers séries"),
-        Pair("$mainUrl/film/arts-martiaux/page/", "Films za m'ringué (Arts martiaux)"),
-        Pair("$mainUrl/film/action/page/", "Films Actions"),
-        Pair("$mainUrl/film/romance/page/", "Films za malomo (Romance)"),
-        Pair("$mainUrl/serie/aventure-serie/page/", "Série aventure"),
-        Pair("$mainUrl/film/documentaire/page/", "Documentaire")
+        Pair("/xfsearch/version-film/page/", "Derniers films"),
+        Pair("/xfsearch/version-serie/page/", "Derniers séries"),
+        Pair("/film/arts-martiaux/page/", "Films za m'ringué (Arts martiaux)"),
+        Pair("/film/action/page/", "Films Actions"),
+        Pair("/film/romance/page/", "Films za malomo (Romance)"),
+        Pair("/serie/aventure-serie/page/", "Série aventure"),
+        Pair("/film/documentaire/page/", "Documentaire")
 
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = request.data + page
+        if (isNotInit) initMainUrl()
+        val url = mainUrl + request.data + page
         val document = app.get(url).document
         val movies = document.select("div#dle-content > div.short")
 
@@ -356,5 +356,4 @@ class FrenchStreamProvider : MainAPI() {
         return newHomePageResponse(request.name, home)
     }
 }
-
 
