@@ -72,7 +72,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         if (tags?.uppercase()?.trim() == "NONE" || tags?.isBlank() == true) tags = lang
         tags = tags?.uppercase()
         mainUrl = overrideUrl.toString()
-        mainUrl = when (true) { // the "c" is not needed and some provider doesn't work with it
+        mainUrl = when { // the "c" is not needed and some provider doesn't work with it
             mainUrl.endsWith("/c/") -> mainUrl.dropLast(3)
             mainUrl.endsWith("/c") -> mainUrl.dropLast(2)
             mainUrl.endsWith("/") -> mainUrl.dropLast(1)
@@ -195,7 +195,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         when {
             url.contains("I_Need_Help") -> { // go to see all the avalaible tags
                 return LiveStreamLoadResponse(
-                    name = "GO TO CREATE YOUR \uD83C\uDDF9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B ACCOUNT eg. italia|sport|crime|uk ",
+                    name = "GO TO CREATE YOUR \uD83C\uDDF9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B ACCOUNT e.g. italia|sport|crime|uk ",
                     url = url,
                     apiName = this.name,
                     dataUrl = url,
@@ -211,7 +211,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     apiName = this.name,
                     dataUrl = url,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
-                    plot = "There is a issue with this account. Please check your credentials or try another account",
+                    plot = "There is an issue with this account. Please check your credentials or change your DNS or use a VPN. Otherwise try with another account",
                     comingSoon = true
                 )
             }
@@ -248,7 +248,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     val posterurl = channel.url_image.toString()
                     val uppername = channelname.uppercase()
                     val quality = getQualityFromString(
-                        when (!channelname.isBlank()) {
+                        when (channelname.isNotBlank()) {
                             uppername.contains(findKeyWord("UHD")) -> {
                                 "UHD"
                             }
@@ -507,7 +507,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                             "\uD83C\uDDF5\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF4\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF1\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF2\u200B\u200B\u200B\u200B\u200B",
                             listOf(
                                 LiveSearchResponse(
-                                    "Contact the provider",
+                                    "Click to see the tips",
                                     "${mainUrl}There_is_an_error", // trick to load the help page
                                     name,
                                     TvType.Live,
@@ -572,7 +572,7 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
                 val arraychannel =
                     mutableListOf<Channel>() // toMutable because HomePageList need to remove element from the list
-                if (channels.isNotEmpty() && idGenre.contains("""\d""".toRegex()) && (categoryTitle.uppercase()
+                if (idGenre.contains("""\d+""".toRegex()) && (categoryTitle.uppercase()
                         .contains(rgxcodeCountry) ||
                             categoryTitle.isContainsTargetCountry(provider)
                             ) || categoryTitle.uppercase()
@@ -626,8 +626,12 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     } else {
                         "$flag ${cleanTitle(categoryTitle).replace(rgxcodeCountry, "").trim()}"
                     }
+                    if (arraychannel.isNotEmpty()) {
+                        arraychannel.toHomePageList(nameGenre, provider, idGenre)
+                    } else {
+                        null
+                    }
 
-                    arraychannel.toHomePageList(nameGenre, provider, idGenre)
 
                 } else {
                     null
