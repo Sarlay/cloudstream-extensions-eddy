@@ -124,9 +124,7 @@ class NineGoal : MainAPI() {
                     this.name,
                     "${this.name} ${it.name} - ${sourcesData.name}",
                     it.url.toString(),
-                    if (mainUrl.takeLast(1) == "/") mainUrl else {
-                        mainUrl + "/"
-                    },//fixUrl(it.url?.getDomainFromUrl().toString()),
+                    "$mainUrl/",//fixUrl(it.url?.getDomainFromUrl().toString()),
                     Qualities.Unknown.value,
                     isM3u8 = true,
                 )
