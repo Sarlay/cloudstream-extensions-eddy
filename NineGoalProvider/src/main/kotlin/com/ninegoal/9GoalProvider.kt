@@ -68,10 +68,6 @@ class NineGoal : MainAPI() {
         TvType.Live
     )
 
-    private fun String.getDomainFromUrl(): String? {
-        return Regex("""^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:\/\n\?\=]+)""").find(this)?.groupValues?.firstOrNull()
-    }
-
     override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val doc = app.get(mainUrl).document
         val apiUrl = doc.select("head > script").first()?.html()?.substringAfter("window.api_base_url = \"")?.substringBefore("\";")
@@ -119,16 +115,38 @@ class NineGoal : MainAPI() {
     ): Boolean {
         val sourcesData = parseJson<sourcesJSON>(app.get(data).text).data
         sourcesData?.playUrls?.apmap {
-            callback.invoke(
-                ExtractorLink(
-                    this.name,
-                    "${this.name} ${it.name} - ${sourcesData.name}",
-                    it.url.toString(),
-                    "$mainUrl/",//fixUrl(it.url?.getDomainFromUrl().toString()),
-                    Qualities.Unknown.value,
-                    isM3u8 = true,
+            val brokenDomain = "canyou.letmestreamyou.net"
+            if(it.url.toString().startsWith("https://$brokenDomain")) {
+                mapOf(
+                    "smoothlikebutterstream" to "playing.smoothlikebutterstream.com",
+                    "tunnelcdnsw" to "playing.tunnelcdnsw.net",
+                    "goforfreedomwme" to "playing.goforfreedomwme.net",
+                    "gameon" to "turnthe.gameon.tel",
+                    "whydontyoustreamwme" to "playing.whydontyoustreamwme.com"
+                ).apmap { (name, value) ->
+                    callback.invoke(
+                        ExtractorLink(
+                            this.name,
+                            "${this.name} ${it.name} - ${name}",
+                            it.url.toString().replace(brokenDomain, value),
+                            "$mainUrl/",
+                            Qualities.Unknown.value,
+                            isM3u8 = true,
+                        )
+                    )
+                }
+            } else {
+                callback.invoke(
+                    ExtractorLink(
+                        this.name,
+                        "${this.name} ${it.name} - ${sourcesData.name}",
+                        it.url.toString(),
+                        "$mainUrl/",
+                        Qualities.Unknown.value,
+                        isM3u8 = true,
+                    )
                 )
-            )
+            }
         }
         return true
     }
