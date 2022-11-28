@@ -1,9 +1,9 @@
 <div align="center">
 
-# *𝔼𝔻𝔻𝕐-𝕖𝕩𝕥𝕖𝕟𝕤𝕚𝕠𝕟*
+# *𝔼𝔻𝔻𝕐-𝔼𝕩𝕥𝕖𝕟𝕤𝕚𝕠𝕟𝕤*
 
 # All available repositories:
-> <a href="https://cloudstream.cf/repos">Providers repository</a>
+> <a href="https://cloudstream.cf/repos">P̸͎͓̺̈́̓̽ŕ̸̫̻̔͒o̸̢͎̪͋̾̕v̸͉̝̞̔͒́i̵͙̫̝͊͊͘d̵̡̙̔͑͘͜e̴̠͉͚̒͋͝r̸̦̠̙̐͑̓s̸̢̡̫̒́̕ r̵͔̼͉̓̐͘e̸͓͓̺̓̿͘p̸̻̪̐͘͘o̸̘̻͔͋̒̓s̵͙̟̝̔͛͠i̵̺̘͇͒͆̐t̴̠̼͇́͌̒o̴̦͚͇͊͛͐r̴͇͍͔̒̕y̴͕̝̪͊̈́͠</a>
 
 ##
 
