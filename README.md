@@ -1,9 +1,13 @@
-# Cloudstream Eddy Plugin Repository 
+<div align="center">
 
-All available repositories: https://recloudstream.github.io/repos/
+# *Cloudstream Eddy-Extensions *
 
-Not all extractors are included, only those need to compile. We need to use loadExtractor in the future.
+# All available repositories:
+> <a href="https://cloudstream.cf/repos"><img src="https://img.shields.io/badge/CloudStream-FF0000?style=flat&logo=kotlin&logoColor=black"></a>
 
+##
+
+<p>
 ## Getting started with writing your first plugin
 
 1. Open the root build.gradle.kts, read the comments and replace all the placeholders
@@ -16,3 +20,11 @@ Not all extractors are included, only those need to compile. We need to use load
 
 This template as well as the gradle plugin and the whole plugin system is **heavily** based on [Aliucord](https://github.com/Aliucord).
 *Go use it, it's a great mobile discord client mod!*
+
+</p>
+
+
+>  [![Discord](https://invidget.switchblade.xyz/5Hus6fM)](https://discord.gg/5Hus6fM)
+
+
+</div>
