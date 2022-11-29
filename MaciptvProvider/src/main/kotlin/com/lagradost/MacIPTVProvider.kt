@@ -841,8 +841,6 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                             media.url_image,
                         )
                     )
-
-
                 }
             }
 
@@ -858,6 +856,5 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                 name, this.toSearchResponseHomePage(provider, GenreId),
                 isHorizontalImages = true
             )
-
     }
 }
