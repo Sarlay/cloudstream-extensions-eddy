@@ -193,15 +193,28 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         when {
-            url.contains("I_Need_Help") -> { // go to see all the avalaible tags
+            url.contains("I_Need_Help0") -> { // how to create an iptv account
+                val media =
+                    parseJson<Channel>(url.replace(mainUrl, "").replace("I_Need_Help0&", ""))
+                return LiveStreamLoadResponse(
+                    name = "GO TO CREATE YOUR IPTV ACCOUNT",
+                    url = media.toJson(),
+                    apiName = this.name,
+                    dataUrl = media.url,
+                    posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
+                    plot = "Find a site where there are IPTV stb/stalker accounts (url + mac address) and create your account",
+                )
+            }
+            url.contains("I_Need_Help1") -> { // go to see all the avalaible tags
+                val media =
+                    parseJson<Channel>(url.replace(mainUrl, "").replace("I_Need_Help1&", ""))
                 return LiveStreamLoadResponse(
                     name = "GO TO CREATE YOUR \uD83C\uDDF9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B ACCOUNT e.g. italia|sport|crime|uk ",
-                    url = url,
+                    url = media.toJson(),
                     apiName = this.name,
-                    dataUrl = url,
+                    dataUrl = media.url,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
                     plot = "ALL TAGS \uD83D\uDD0E ${allCategory.sortedBy { it }}",
-                    comingSoon = true
                 )
             }
             url.contains("There_is_an_error") -> { // case where the provider don't work
@@ -215,77 +228,77 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                     comingSoon = true
                 )
             }
-            else -> ""
+            else -> {
+                val media = parseJson<Channel>(url.replace(mainUrl, ""))
+                val epg_url =
+                    "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${media.ch_id}&size=10&JsHttpRequest=1-xml" // the plot when it's avalaible
+                val response = app.get(epg_url, headers = headerMac)
+                val description = getEpg(response.text)
+                val link = media.url
+                val title = media.title
+                val a = cleanTitle(title).replace(findKeyWord(lang), "").trim()
+                val posterUrl = media.url_image.toString()
+                var b_new: String
+
+                return LiveStreamLoadResponse(
+                    name = title,
+                    url = media.toJson(),
+                    apiName = this.name,
+                    dataUrl = link,
+                    posterUrl = posterUrl,
+                    plot = description,
+                    recommendations = arraymediaPlaylist.mapNotNull { channel ->
+                        val b = cleanTitle(channel.title).replace(findKeyWord(lang), "").trim()
+                        b_new = b.take(6)
+                        if (channel.id != media.id && a.take(6)
+                                .contains(b_new) && media.tv_genre_id == channel.tv_genre_id
+                        ) {
+                            val streamurl = channel.toJson()
+                            val channelname = channel.title
+                            val posterurl = channel.url_image.toString()
+                            val uppername = channelname.uppercase()
+                            val quality = getQualityFromString(
+                                when (channelname.isNotBlank()) {
+                                    uppername.contains(findKeyWord("UHD")) -> {
+                                        "UHD"
+                                    }
+                                    uppername.contains(findKeyWord("HD")) -> {
+                                        "HD"
+                                    }
+                                    uppername.contains(findKeyWord("SD")) -> {
+                                        "SD"
+                                    }
+                                    uppername.contains(findKeyWord("FHD")) -> {
+                                        "HD"
+                                    }
+                                    uppername.contains(findKeyWord("4K")) -> {
+                                        "FourK"
+                                    }
+
+                                    else -> {
+                                        null
+                                    }
+                                }
+                            )
+                            LiveSearchResponse(
+                                name = cleanTitleButKeepNumber(channelname).replace(
+                                    findKeyWord(lang),
+                                    ""
+                                ).trim(),
+                                url = streamurl,
+                                name,
+                                TvType.Live,
+                                posterUrl = posterurl,
+                                quality = quality,
+                            )
+                        } else {
+                            null
+                        }
+                    }
+                )
+            }
 
         }
-
-        val media = parseJson<Channel>(url.replace(mainUrl, ""))
-        val epg_url =
-            "$mainUrl/portal.php?type=itv&action=get_short_epg&ch_id=${media.ch_id}&size=10&JsHttpRequest=1-xml" // the plot when it's avalaible
-        val response = app.get(epg_url, headers = headerMac)
-        val description = getEpg(response.text)
-        val link = media.url
-        val title = media.title
-        val a = cleanTitle(title).replace(findKeyWord(lang), "").trim()
-        val posterUrl = media.url_image.toString()
-        var b_new: String
-
-        return LiveStreamLoadResponse(
-            name = title,
-            url = media.toJson(),
-            apiName = this.name,
-            dataUrl = link,
-            posterUrl = posterUrl,
-            plot = description,
-            recommendations = arraymediaPlaylist.mapNotNull { channel ->
-                val b = cleanTitle(channel.title).replace(findKeyWord(lang), "").trim()
-                b_new = b.take(6)
-                if (channel.id != media.id && a.take(6)
-                        .contains(b_new) && media.tv_genre_id == channel.tv_genre_id
-                ) {
-                    val streamurl = channel.toJson()
-                    val channelname = channel.title
-                    val posterurl = channel.url_image.toString()
-                    val uppername = channelname.uppercase()
-                    val quality = getQualityFromString(
-                        when (channelname.isNotBlank()) {
-                            uppername.contains(findKeyWord("UHD")) -> {
-                                "UHD"
-                            }
-                            uppername.contains(findKeyWord("HD")) -> {
-                                "HD"
-                            }
-                            uppername.contains(findKeyWord("SD")) -> {
-                                "SD"
-                            }
-                            uppername.contains(findKeyWord("FHD")) -> {
-                                "HD"
-                            }
-                            uppername.contains(findKeyWord("4K")) -> {
-                                "FourK"
-                            }
-
-                            else -> {
-                                null
-                            }
-                        }
-                    )
-                    LiveSearchResponse(
-                        name = cleanTitleButKeepNumber(channelname).replace(
-                            findKeyWord(lang),
-                            ""
-                        ).trim(),
-                        url = streamurl,
-                        name,
-                        TvType.Live,
-                        posterUrl = posterurl,
-                        quality = quality,
-                    )
-                } else {
-                    null
-                }
-            }
-        )
 
     }
 
@@ -346,6 +359,18 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
+        if (data.contains("githubusercontent") && data.contains(".mp4")) {
+            callback.invoke(
+                ExtractorLink(
+                    name,
+                    "TUTO",
+                    data,
+                    "",
+                    Qualities.Unknown.value,
+                )
+            )
+            return true
+        }
         val TokenLink =
             "$mainUrl/portal.php?type=itv&action=create_link&cmd=ffmpeg%20$data&series=&forced_storage=0&disable_ad=0&download=0&force_ch_link_check=0&JsHttpRequest=1-xml"
         val getTokenLink = app.get(TokenLink, headers = headerMac).text
@@ -512,6 +537,23 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
                                     name,
                                     TvType.Live,
                                     "https://bodhisattva4you.files.wordpress.com/2014/11/esprit-probleme-00.jpg",
+                                ),
+                                LiveSearchResponse(
+                                    "Click to see how to create an account",
+                                    "${mainUrl}${
+                                        Channel(
+                                            "\uD83D\uDC64 \uD83C\uDD78\uD83C\uDD7F\uD83C\uDD83\uD83C\uDD85 Account",
+                                            "I_Need_Help0&https://user-images.githubusercontent.com/47984460/204648696-1f7d18b8-6bf7-4392-9269-32c7b0e97403.mp4", // trick to load the help page
+                                            "https://userguiding.com/wp-content/uploads/2021/06/best-help-center-software.jpg",
+                                            "",
+                                            "000976000",
+                                            "",
+                                            "000976000"
+                                        ).toJson()
+                                    }", // trick to load the help page
+                                    name,
+                                    TvType.Live,
+                                    "https://userguiding.com/wp-content/uploads/2021/06/best-help-center-software.jpg",
                                 )
                             ),
                             isHorizontalImages = true
@@ -681,18 +723,27 @@ class MacIPTVProvider(override var lang: String) : MainAPI() {
          * So the user will know what is available and can select his own country or categories via the account creation tag */
         fun getHelpHomePage(provider: MacIPTVProvider): List<HomePageList> {
             val helpCat =
-                "\uD83C\uDDF9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B Account"
-
+                "ℹ️\uD83C\uDDED\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF1\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF5\u200B\u200B\u200B\u200B\u200B"
+            val idHelp = "0097600"
             return arrayListOf(
                 arrayListOf(
                     Channel(
-                        "\uD83D\uDD0E TAG",
-                        "${provider.mainUrl}I_Need_Help", // trick to load the help page
+                        "\uD83D\uDC64 \uD83C\uDD78\uD83C\uDD7F\uD83C\uDD83\uD83C\uDD85 Account",
+                        "I_Need_Help0&https://user-images.githubusercontent.com/47984460/204648696-1f7d18b8-6bf7-4392-9269-32c7b0e97403.mp4", // trick to load the help page
                         "https://userguiding.com/wp-content/uploads/2021/06/best-help-center-software.jpg",
                         "",
                         "000976000",
-                        "0097600",
-                        ""
+                        idHelp,
+                        "000976000"
+                    ),
+                    Channel(
+                        "\uD83D\uDD0E Your TAG Account",
+                        "I_Need_Help1&https://user-images.githubusercontent.com/47984460/204643246-405e7a7b-544e-4389-a78e-395c3876e06d.mp4", // trick to load the help page
+                        "https://userguiding.com/wp-content/uploads/2021/06/best-help-center-software.jpg",
+                        "",
+                        "000976100",
+                        idHelp,
+                        "000976100"
                     )
                 ).toHomePageList(
                     helpCat,
