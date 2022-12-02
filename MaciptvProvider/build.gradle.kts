@@ -5,13 +5,13 @@ dependencies {
 }
 
 // use an integer for version numbers
-version = 2
+version = 3
 
 
 cloudstream {
     // All of these properties are optional, you can safely remove them
 
-    description = "Add your IPTV account or alternatively, the automatic account will allow you to watch live (Sport, movies, ...)."
+    description = "Add your IPTV account or alternatively, the automatic account will allow you to watch live (Sport, Movies,TvSeries ...)."
     authors = listOf("Eddy")
 
     /**
@@ -22,7 +22,7 @@ cloudstream {
      * 3: Beta only
      * */
     status = 1 // will be 3 if unspecified
-    tvTypes = listOf("Live")
+    tvTypes = listOf("Live","TvSeries","Movie")
 
     iconUrl = "https://www.google.com/s2/favicons?domain=franceiptv.fr/&sz=%size%"
     requiresResources = true
