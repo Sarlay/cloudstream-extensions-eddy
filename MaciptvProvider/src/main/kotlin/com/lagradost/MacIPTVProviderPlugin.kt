@@ -19,15 +19,7 @@ class MacIPTVProviderPlugin : Plugin() {
         // All providers should be added in this manner. Please don't edit the providers list directly.
         iptvboxApi.init()
         tagsiptvboxApi.init()
-        registerMainAPI(MacIPTVProvider("fr","itv"))
-		registerMainAPI(MacIPTVProvider("en","itv"))
-		registerMainAPI(MacIPTVProvider("ar","itv"))
-        registerMainAPI(MacIPTVProvider("fr","vod"))
-		registerMainAPI(MacIPTVProvider("en","vod"))
-		registerMainAPI(MacIPTVProvider("ar","vod"))
-        registerMainAPI(MacIPTVProvider("fr","series"))
-		registerMainAPI(MacIPTVProvider("en","series"))
-		registerMainAPI(MacIPTVProvider("ar","series"))
+        registerMainAPI(MacIPTVProvider())
         ioSafe {
             iptvboxApi.initialize()
             tagsiptvboxApi.initialize()
