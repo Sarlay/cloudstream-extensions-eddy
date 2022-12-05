@@ -276,55 +276,46 @@ class MacIPTVProvider : MainAPI() {
                                 nbr
                             }
                         }
-                        var stop = false
                         List(takeN - 1) { it + 2 }.apmap {
-                            if (!stop) {
-                                tryParseJson<RootVoDnSeries>(
-                                    rgxFindJson.find(
-                                        app.get(
-                                            "$mainUrl/portal.php?type=$type&action=get_ordered_list&category=$idGenre&movie_id=0&season_id=0&episode_id=0&p=$it&sortby=added",
-                                            headers = headerMac
-                                        ).text
-                                    )?.groupValues?.get(
-                                        0
-                                    )
-                                )?.js?.data!!.forEach { data ->
-                                    if (data.categoryId == idGenre) {
-                                        val namedata = if (type == "vod") {
-                                            data.name.toString()
-                                        } else {
-                                            data.path.toString()
-                                        }
-                                        res += sequenceOf(
-                                            Channel(
-                                                namedata,
-                                                data.cmd.toString(),
-                                                data.screenshotUri?.replace("""\""", ""),
-                                                "",
-                                                data.id,
-                                                data.categoryId,
-                                                data.id,
-                                                data.description,
-                                                data.actors,
-                                                if (data.year?.split("-")?.isNotEmpty() == true) {
-                                                    data.year!!.split("-")[0]
-                                                } else {
-                                                    data.year
-                                                },//2022-02-01
-                                                data.ratingIm,//2.3
-                                                1,
-                                                data.genresStr,
-                                                data.series,
-                                            ).toJson()
-                                        )
-                                    } else {
-                                        stop = true
-                                        return@forEach
-                                    }
+                            tryParseJson<RootVoDnSeries>(
+                                rgxFindJson.find(
+                                    app.get(
+                                        "$mainUrl/portal.php?type=$type&action=get_ordered_list&category=$idGenre&movie_id=0&season_id=0&episode_id=0&p=$it&sortby=added",
+                                        headers = headerMac
+                                    ).text
+                                )?.groupValues?.get(
+                                    0
+                                )
+                            )?.js?.data!!.forEach { data ->
+                                val namedata = if (type == "vod") {
+                                    data.name.toString()
+                                } else {
+                                    data.path.toString()
                                 }
-                            } else {
-                                return@apmap
+                                res += sequenceOf(
+                                    Channel(
+                                        namedata,
+                                        data.cmd.toString(),
+                                        data.screenshotUri?.replace("""\""", ""),
+                                        "",
+                                        data.id,
+                                        data.categoryId,
+                                        data.id,
+                                        data.description,
+                                        data.actors,
+                                        if (data.year?.split("-")?.isNotEmpty() == true) {
+                                            data.year!!.split("-")[0]
+                                        } else {
+                                            data.year
+                                        },//2022-02-01
+                                        data.ratingIm,//2.3
+                                        1,
+                                        data.genresStr,
+                                        data.series,
+                                    ).toJson()
+                                )
                             }
+
                         }
                     }
                 }
