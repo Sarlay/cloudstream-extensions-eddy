@@ -11,12 +11,12 @@ import kotlinx.coroutines.runBlocking
 import me.xdrop.fuzzywuzzy.FuzzySearch
 import java.lang.Math.ceil
 
-class MacIPTVProvider() : MainAPI() {
+class MacIPTVProvider : MainAPI() {
     private var defaulmacAdresse =
-        "mac=00:1A:79:28:9C:Be"//"mac=00%3A1a%3A79%3Aae%3A2a%3A30"//"mac=00:1A:79:aa:53:65"//
+        "mac=00:1A:79:aa:53:65"//"mac=00:1A:79:31:ed:e5"//"mac=00:1A:79:28:9C:Be"//"mac=00%3A1a%3A79%3Aae%3A2a%3A30"//
     private val defaultmainUrl =
-        "http://infinitymedia.live:8880"//"http://ultra-box.club"//"http://ky-iptv.com:25461/portalstb"//
-    private var defaultname = "ky-iptv MacIPTV"
+        "http://ky-iptv.com:25461/portalstb"//"http://nas.bordo1453.be"//"http://infinitymedia.live:8880"//"http://ultra-box.club"//
+    private var defaultname = "Test-Account MacIPTV"
     private var Basename = "MacIPTV \uD83D\uDCFA"
     override val hasQuickSearch = false
     override val hasMainPage = true
@@ -29,7 +29,7 @@ class MacIPTVProvider() : MainAPI() {
         listOf<String>() // even if we don't display all countries or categories, we need to know those avalaible
 
     init {
-        defaultname = "ky-iptv $Basename "
+        defaultname = "Test-Account $Basename "
         name = Basename
     }
 
@@ -89,8 +89,7 @@ class MacIPTVProvider() : MainAPI() {
                 "Cookie" to adresseMac,
                 "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
                 "X-User-Agent" to "Model: MAG250; Link: WiFi",
-
-                )
+            )
         )
         key = tryParseJson<Getkey>(
             Regex("""\{\"js\"(.*[\r\n]*)+\}""").find(reponseGetkey.text)?.groupValues?.get(0)
@@ -127,11 +126,13 @@ class MacIPTVProvider() : MainAPI() {
                         "Cookie" to defaulmacAdresse,
                         "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
                         "Authorization" to "Bearer $key",
+                        "X-User-Agent" to "Model: MAG250; Link: WiFi",
                     )
                 } else {
                     mutableMapOf(
                         "Cookie" to defaulmacAdresse,
                         "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
+                        "X-User-Agent" to "Model: MAG250; Link: WiFi",
                     )
                 }
             }
@@ -143,11 +144,16 @@ class MacIPTVProvider() : MainAPI() {
                         "Cookie" to "mac=$loginMac",
                         "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
                         "Authorization" to "Bearer $key",
+                        "X-User-Agent" to "Model: MAG250; Link: WiFi",
                     )
                 } else {
                     mutableMapOf(
                         "Cookie" to "mac=$loginMac",
                         "User-Agent" to "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
+                        "X-User-Agent" to "Model: MAG250; Link: WiFi",
+                        /*       "Connection" to "Keep-Alive",
+                               "Accept-Encoding" to "gzip",
+                               "Cache-Control" to "no-cache",*/
                     )
                 }
             }
@@ -199,7 +205,7 @@ class MacIPTVProvider() : MainAPI() {
                     )
                 )?.js?.data?.forEach { data ->
                     if (data.tvGenreId == idGenre) {
-                        res = sequenceOf(
+                        res += sequenceOf(
                             Channel(
                                 data.name.toString(),
                                 "http://localhost/ch/${data.id}" + "_",
@@ -209,7 +215,7 @@ class MacIPTVProvider() : MainAPI() {
                                 data.tvGenreId,
                                 data.cmds[0].chId
                             ).toJson()
-                        ) + res
+                        )
                     }
 
                 }
@@ -235,7 +241,7 @@ class MacIPTVProvider() : MainAPI() {
                             } else {
                                 data.path.toString()
                             }
-                            res = sequenceOf(
+                            res += sequenceOf(
                                 Channel(
                                     namedata,
                                     data.cmd.toString(),
@@ -246,13 +252,17 @@ class MacIPTVProvider() : MainAPI() {
                                     data.id,
                                     data.description,
                                     data.actors,
-                                    data.year,//2022-02-01
+                                    if (data.year?.split("-")?.isNotEmpty() == true) {
+                                        data.year!!.split("-")[0]
+                                    } else {
+                                        data.year
+                                    },//2022-02-01
                                     data.ratingIm,//2.3
                                     1,//isMovie
                                     data.genresStr,// "Fantasy, Action, Adventure",
                                     data.series,
                                 ).toJson()
-                            ) + res
+                            )
                         }
                     }
                     else -> {
@@ -285,7 +295,7 @@ class MacIPTVProvider() : MainAPI() {
                                         } else {
                                             data.path.toString()
                                         }
-                                        res = sequenceOf(
+                                        res += sequenceOf(
                                             Channel(
                                                 namedata,
                                                 data.cmd.toString(),
@@ -296,13 +306,17 @@ class MacIPTVProvider() : MainAPI() {
                                                 data.id,
                                                 data.description,
                                                 data.actors,
-                                                data.year,
-                                                data.ratingIm,
+                                                if (data.year?.split("-")?.isNotEmpty() == true) {
+                                                    data.year!!.split("-")[0]
+                                                } else {
+                                                    data.year
+                                                },//2022-02-01
+                                                data.ratingIm,//2.3
                                                 1,
                                                 data.genresStr,
                                                 data.series,
                                             ).toJson()
-                                        ) + res
+                                        )
                                     } else {
                                         stop = true
                                         return@forEach
@@ -347,8 +361,12 @@ class MacIPTVProvider() : MainAPI() {
                 data.id,
                 data.description,
                 data.actors,
-                data.year,
-                data.ratingIm,
+                if (data.year?.split("-")?.isNotEmpty() == true) {
+                    data.year!!.split("-")[0]
+                } else {
+                    data.year
+                },//2022-02-01
+                data.ratingIm,//2.3
                 1,
                 data.genresStr,
                 data.series,
@@ -391,8 +409,8 @@ class MacIPTVProvider() : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         val queryCode = query.split("&")
         var rquery: String? = null
-        var idGenre: String? = null
-        var type: String? = null
+        var idGenre: String?
+        var type: String?
         var all: String? = null
         when (queryCode.size) {
             4 -> {
@@ -431,9 +449,14 @@ class MacIPTVProvider() : MainAPI() {
         }
         if (type != null) {
 
-            val arrayCh = createArrayChannel(idGenre.toString(), type.toString(), false,all=="*")
+            val arrayCh = createArrayChannel(
+                idGenre.toString(),
+                type.toString(),
+                false,
+                all == "*" || rquery == "*"
+            )
             val resSeq =
-                if (rquery.isNullOrBlank()) {
+                if (rquery.isNullOrBlank() || rquery == "*") {
                     arrayCh
                 } else {
                     arrayCh.sortedBy {
@@ -634,7 +657,8 @@ class MacIPTVProvider() : MainAPI() {
                             media.dataStream?.url_image,
                             media.dataStream?.year?.toIntOrNull(),
                             plot,
-                            media.dataStream?.rating?.toIntOrNull(),
+                            media.dataStream?.rating?.toDouble()?.let { ceil(it).toInt() },
+                            tags = media.dataStream?.genres_str?.split(","),
                             recommendations = recommendations.toList(),
                             comingSoon = isNothing
 
@@ -660,7 +684,8 @@ class MacIPTVProvider() : MainAPI() {
                                         name = "Episode $it",
                                         description = channel.description,
                                         posterUrl = channel.url_image,
-                                        rating = channel.rating?.toIntOrNull()
+                                        rating = channel.rating?.toDouble()
+                                            ?.let { it1 -> ceil(it1).toInt() }
                                     )
                                 }
                             }.flatten()
@@ -675,7 +700,8 @@ class MacIPTVProvider() : MainAPI() {
                             media.dataStream?.year?.toIntOrNull(),
                             plot,
                             null,
-                            media.dataStream?.rating?.toIntOrNull(),
+                            media.dataStream?.rating?.toDouble()?.let { ceil(it).toInt() },
+                            tags = media.dataStream?.genres_str?.split(","),
                             recommendations = recommendations.toList(),
                             comingSoon = episodes.isEmpty()
                         )
@@ -702,6 +728,8 @@ class MacIPTVProvider() : MainAPI() {
                             posterUrl = posterUrl,
                             plot = description,
                             recommendations = recommendations.toList(),// recommendations.toList(),
+                            rating = media.dataStream?.rating?.toDouble()?.let { ceil(it).toInt() },
+                            tags = media.dataStream?.genres_str?.split(","),
                             comingSoon = isNothing
 
                         )
@@ -723,12 +751,12 @@ class MacIPTVProvider() : MainAPI() {
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): okhttp3.Response {
                 val request = chain.request()
-                if (!request.url.toString().contains("githubusercontent")) {
-                    val chID = request.headers.get("Accept")?.replace("*/*", "")?.trim()
-                    //Regex("""\/(\d*)\?""").find(request.url.toString())!!.groupValues[1] + "_"
+                if (request.url.toString().contains("token")) {
+                    val chID = request.headers.get("Cookie")
+                    //val chID = Regex("""\/(\d*)\?""").find(request.url.toString())!!.groupValues[1] + "_"
                     val TokenLink = when {
                         chID?.contains("cmd=") == true -> "$mainUrl/portal.php?type=vod&action=create_link&$chID"
-                        else -> "$mainUrl/portal.php?type=itv&action=create_link&cmd=ffmpeg%20$chID&series=&forced_storage=0&disable_ad=0&download=0&force_ch_link_check=0&JsHttpRequest=1-xml"
+                        else -> "$mainUrl/portal.php?type=itv&action=create_link&forced_storage=undefined&download=0&cmd=ffmpeg%20$chID"///portal.php?type=itv&action=create_link&cmd=ffmpeg%20$chID&series=&forced_storage=0&disable_ad=0&download=0&force_ch_link_check=0&JsHttpRequest=1-xml"
 
                     }
                     var link: String
@@ -742,16 +770,15 @@ class MacIPTVProvider() : MainAPI() {
                                 ""
                             )
                         lien = link
-                        if (link.contains("extension")) {
-                            val headerlocation = app.get(
-                                link,
-                                allowRedirects = false
-                            ).headers
-                            val redirectlink = headerlocation["location"]
-                                .toString()
-                            if (redirectlink != "null") {
-                                lien = redirectlink
-                            }
+                        //link.contains("extension")|| link.contains("ext") || link.contains("movie") || link.contains("serie")
+                        val headerlocation = app.get(
+                            link,
+                            allowRedirects = false
+                        ).headers
+                        val redirectlink = headerlocation["location"]
+                            .toString()
+                        if (redirectlink != "null") {
+                            lien = redirectlink
                         }
                     }
 
@@ -792,7 +819,7 @@ class MacIPTVProvider() : MainAPI() {
             }
             else -> {
                 headCode = data
-                "$mainUrl/portal.php?type=itv&action=create_link&cmd=ffmpeg%20$data&series=&forced_storage=0&disable_ad=0&download=0&force_ch_link_check=0&JsHttpRequest=1-xml"
+                "$mainUrl/portal.php?type=itv&action=create_link&forced_storage=undefined&download=0&cmd=ffmpeg%20$data"//&series=&forced_storage=undefined&disable_ad=0&download=0&force_ch_link_check=0"
             }
 
         }
@@ -802,13 +829,14 @@ class MacIPTVProvider() : MainAPI() {
         val link =
             regexGetLink.find(getTokenLink)?.groupValues?.get(1).toString().replace("""\""", "")
         val head = mapOf(
-            "Accept" to "*/* $headCode",
+            "Accept" to "*/*",
             "Accept-Language" to "en_US",
             "User-Agent" to "VLC/3.0.18 LibVLC/3.0.18",
-            "Range" to "bytes=0-"
+            "Range" to "bytes=0-",
+            "Cookie" to "$headCode"
         )
         val lien = when {
-            true -> {//link.contains("extension") || link.contains("ext") || link.contains("movie") || link.contains("serie")
+            true -> {//link.contains("extension")|| link.contains("ext") || link.contains("movie") || link.contains("serie")
                 val headerlocation = app.get(
                     link,
                     headers = head,
