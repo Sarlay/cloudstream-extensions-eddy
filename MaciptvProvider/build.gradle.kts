@@ -5,7 +5,7 @@ dependencies {
 }
 
 // use an integer for version numbers
-version = 3
+version = 4
 
 
 cloudstream {
@@ -22,7 +22,7 @@ cloudstream {
      * 3: Beta only
      * */
     status = 1 // will be 3 if unspecified
-    tvTypes = listOf("Live","TvSeries","Movie")
+    tvTypes = listOf("Live","TvSeries","Movie","Anime")
 
     iconUrl = "https://www.google.com/s2/favicons?domain=franceiptv.fr/&sz=%size%"
     requiresResources = true
