@@ -371,7 +371,7 @@ class MacIPTVProvider : MainAPI() {
             Pair(
                 "Find a media",
                 listOf(
-                    "https://user-images.githubusercontent.com/47984460/205495824-39d25c4b-07f7-4958-841e-b2a70bdc4cb1.mp4",
+                    "https://user-images.githubusercontent.com/47984460/205964312-51454e77-eb8d-4dc3-9cb7-558fbd947be2.mp4",
                     "https://www.jharkhanditsolutions.com/wp-content/uploads/2020/07/GettyImages-1047578412-692fa117cf86450287d8873eeb1a95c8-aa8d654cec814174a9e07bdae85a1eb7.jpg",
                     "search"
                 )
@@ -396,12 +396,11 @@ class MacIPTVProvider : MainAPI() {
         }
     }
 
-    ///portalstb/portal.php?type=series&action=get_ordered_list&movie_id=0&season_id=0&episode_id=0&row=0&category=*&fav=0&sortby=added&hd=0&not_ended=0&p=1&JsHttpRequest=1-xml
     override suspend fun search(query: String): List<SearchResponse> {
         val queryCode = query.split("&")
         var rquery: String? = null
-        var idGenre: String?
-        var type: String?
+        val idGenre: String?
+        val type: String?
         var all: String? = null
         when (queryCode.size) {
             4 -> {
@@ -542,40 +541,44 @@ class MacIPTVProvider : MainAPI() {
 
         when (type) {
             "search" -> { // how to create an iptv account
-                return LiveStreamLoadResponse(
+                return MovieLoadResponse(
                     name = "How to search",
                     url = media.toJson(),
                     apiName = name,
+                    TvType.Movie,
                     dataUrl = media.id,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
-                    plot = "For example to see all the content of the category (239) from movie(code=1), then go search \"1&239&*\". Others e.g. fast but few outcomes => \"1&239&avengers\" or long but search in the whole category \"1&239&*&avengers\" ;",
+                    plot = "For example to see all the content of the category (➋➌➒) from movie(code=➊), then go search ➊&➋➌➒&*. Others e.g. Want to search the movie \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B in ➋➌➒ => fast way but few outcomes: ➊&➋➌➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B or search in the whole category but long ➊&➋➌➒&*&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
                 )
             }
             "account" -> { // how to create an iptv account
-                return LiveStreamLoadResponse(
+                return MovieLoadResponse(
                     name = "GO TO CREATE YOUR IPTV ACCOUNT",
                     url = media.toJson(),
                     apiName = name,
+                    TvType.Movie,
                     dataUrl = media.id,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
                     plot = "Find a site where there are IPTV stb/stalker accounts (url + mac address) and create your account",
                 )
             }
             "tags" -> { // go to see all the avalaible tags
-                return LiveStreamLoadResponse(
+                return MovieLoadResponse(
                     name = "GO TO CREATE YOUR \uD83C\uDDF9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B ACCOUNT e.g. italia|sport|crime|uk ",
                     url = media.toJson(),
                     apiName = name,
+                    TvType.Movie,
                     dataUrl = media.id,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
                     plot = "ALL TAGS \uD83D\uDD0E $allCategory",
                 )
             }
             "error" -> { // case where the provider don't work
-                return LiveStreamLoadResponse(
+                return MovieLoadResponse(
                     name = "\uD83C\uDDF5\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF4\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF1\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF2\u200B\u200B\u200B\u200B\u200B",
                     url = url,
                     apiName = this.name,
+                    TvType.Movie,
                     dataUrl = url,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
                     plot = "There is an issue with this account. Please see the tags and create an account. Otherwise check your credentials or change your DNS or use a VPN. In the worst case try with another account",
@@ -584,54 +587,64 @@ class MacIPTVProvider : MainAPI() {
             }
             else -> {
                 val idGenre = media.id
-                val recommendations = createArrayChannel(
-                    idGenre,
-                    type.toString()
-                ).map {
-                    val channel = parseJson<Channel>(it)
-                    val channelname = channel.title
-                    val posterurl = channel.url_image.toString()
-                    val streamurl = CategorieInfo(
-                        channelname,
-                        idGenre,
-                        type,
-                        channel,
-                    ).toJson()
-                    val uppername = channelname.uppercase()
-                    val quality = getQualityFromString(
-                        when (channelname.isNotBlank()) {
-                            uppername.contains(findKeyWord("UHD")) -> {
-                                "UHD"
-                            }
-                            uppername.contains(findKeyWord("HD")) -> {
-                                "HD"
-                            }
-                            uppername.contains(findKeyWord("SD")) -> {
-                                "SD"
-                            }
-                            uppername.contains(findKeyWord("FHD")) -> {
-                                "HD"
-                            }
-                            uppername.contains(findKeyWord("4K")) -> {
-                                "FourK"
-                            }
-
-                            else -> {
-                                null
-                            }
-                        }
-                    )
-                    LiveSearchResponse(
-                        name = cleanTitleButKeepNumber(channelname),
-                        url = streamurl,
-                        name,
-                        TvType.Live,
-                        posterUrl = posterurl,
-                        quality = quality,
-                    )
-
-                }
                 val isNothing = media.dataStream?.url.isNullOrBlank()
+                val dataUrl = if (isNothing) {
+                    "https://user-images.githubusercontent.com/47984460/205964312-51454e77-eb8d-4dc3-9cb7-558fbd947be2.mp4"
+                } else {
+                    media.dataStream?.url.toString()
+                }
+                var recommendations = if (isNothing) {
+                    createArrayChannel(
+                        idGenre,
+                        type.toString()
+                    ).map {
+                        val channel = parseJson<Channel>(it)
+                        val channelname = channel.title
+                        val posterurl = channel.url_image.toString()
+                        val streamurl = CategorieInfo(
+                            channelname,
+                            idGenre,
+                            type,
+                            channel,
+                        ).toJson()
+                        val uppername = channelname.uppercase()
+                        val quality = getQualityFromString(
+                            when (channelname.isNotBlank()) {
+                                uppername.contains(findKeyWord("UHD")) -> {
+                                    "UHD"
+                                }
+                                uppername.contains(findKeyWord("HD")) -> {
+                                    "HD"
+                                }
+                                uppername.contains(findKeyWord("SD")) -> {
+                                    "SD"
+                                }
+                                uppername.contains(findKeyWord("FHD")) -> {
+                                    "HD"
+                                }
+                                uppername.contains(findKeyWord("4K")) -> {
+                                    "FourK"
+                                }
+
+                                else -> {
+                                    null
+                                }
+                            }
+                        )
+                        LiveSearchResponse(
+                            name = cleanTitleButKeepNumber(channelname),
+                            url = streamurl,
+                            name,
+                            TvType.Live,
+                            posterUrl = posterurl,
+                            quality = quality,
+                        )
+
+                    }
+                } else {
+                    null
+                }
+
                 val plot = if (isNothing) {
                     "\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEE\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF4\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B \uD83D\uDC49 in recommendations"
                 } else {
@@ -644,19 +657,19 @@ class MacIPTVProvider : MainAPI() {
                             media.toJson(),
                             apiName = this.name,
                             TvType.Movie,
-                            media.dataStream?.url.toString(),
+                            dataUrl,
                             media.dataStream?.url_image,
                             media.dataStream?.year?.toIntOrNull(),
                             plot,
-                            media.dataStream?.rating?.toDouble()?.let { ceil(it).toInt() },
+                            media.dataStream?.rating?.toIntOrNull(),
                             tags = media.dataStream?.genres_str?.split(","),
-                            recommendations = recommendations.toList(),
-                            comingSoon = isNothing
+                            recommendations = recommendations?.toList(),
 
-                        )
+                            )
                     }
                     "series" -> {
-                        val episodes =
+                        var episodes =
+
                             findepisode(
                                 media.dataStream?.tv_genre_id.toString(),
                                 media.dataStream?.id.toString()
@@ -675,11 +688,26 @@ class MacIPTVProvider : MainAPI() {
                                         name = "Episode $it",
                                         description = channel.description,
                                         posterUrl = channel.url_image,
-                                        rating = channel.rating?.toDouble()
-                                            ?.let { it1 -> ceil(it1).toInt() }
+                                        rating = channel.rating?.toIntOrNull()
+
                                     )
                                 }
                             }.flatten()
+                        if (episodes.isEmpty()) {
+                            episodes = listOf(
+                                Episode(
+                                    dataUrl,
+                                    episode = 1,
+                                    season = null,
+                                    name = "Ⓣⓤⓣⓞ",
+                                    description = "For example to see all the content of the category (➋➌➒) from movie(code=➊), then go search ➊&➋➌➒&*. Others e.g. Want to search the movie \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B in ➋➌➒ => fast way but few outcomes: ➊&➋➌➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B or search in the whole category but long ➊&➋➌➒&*&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
+                                    posterUrl = "https://www.jharkhanditsolutions.com/wp-content/uploads/2020/07/GettyImages-1047578412-692fa117cf86450287d8873eeb1a95c8-aa8d654cec814174a9e07bdae85a1eb7.jpg",
+                                )
+                            )
+                        } else {
+                            recommendations = null
+                        }
+
 
                         return TvSeriesLoadResponse(
                             media.title,
@@ -689,12 +717,11 @@ class MacIPTVProvider : MainAPI() {
                             episodes,
                             media.dataStream?.url_image,
                             media.dataStream?.year?.toIntOrNull(),
-                            plot,
+                            media.dataStream?.description,
                             null,
-                            media.dataStream?.rating?.toDouble()?.let { ceil(it).toInt() },
+                            media.dataStream?.rating?.toIntOrNull(),
                             tags = media.dataStream?.genres_str?.split(","),
-                            recommendations = recommendations.toList(),
-                            comingSoon = episodes.isEmpty()
+                            recommendations = recommendations?.toList(),
                         )
                     }
                     else -> {
@@ -707,7 +734,6 @@ class MacIPTVProvider : MainAPI() {
                             "\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEE\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF4\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B \uD83D\uDC49 in recommendations"
                         }
 
-                        val link = media.dataStream?.url.toString()
                         val title = media.title
                         val posterUrl = media.dataStream?.url_image.toString()
 
@@ -715,14 +741,12 @@ class MacIPTVProvider : MainAPI() {
                             name = title,
                             url = media.toJson(),
                             apiName = this.name,
-                            dataUrl = link,
+                            dataUrl = dataUrl,
                             posterUrl = posterUrl,
                             plot = description,
-                            recommendations = recommendations.toList(),// recommendations.toList(),
-                            rating = media.dataStream?.rating?.toDouble()?.let { ceil(it).toInt() },
+                            recommendations = recommendations?.toList(),
+                            rating = media.dataStream?.rating?.toIntOrNull(),
                             tags = media.dataStream?.genres_str?.split(","),
-                            comingSoon = isNothing
-
                         )
                     }
                 }
@@ -1095,7 +1119,7 @@ class MacIPTVProvider : MainAPI() {
             )?.js?.phone ?: "null"
         }
         val returnList = arrayListOf<HomePageList>()
-        listOf("Live TV \uD83D\uDD34 (code=0)", "MOVIES (code=1)", "SERIES (code=2)").apmap {
+        listOf("Live TV \uD83D\uDD34 code=0", "MOVIES code=1", "SERIES code=2").apmap {
             val categorie = it
             val type = when {
                 categorie.contains("Live") -> "itv"
@@ -1168,7 +1192,11 @@ class MacIPTVProvider : MainAPI() {
         if (returnList.isEmpty()) {
             return AvoidProblem()
         }
-        return HomePageResponse(arrayListOf(getHelpHomePage()) + returnList)
+        return HomePageResponse(arrayListOf(getHelpHomePage()) + returnList.sortedBy {
+            it.name.takeLast(
+                1
+            )
+        })
     }
 
     companion object {
