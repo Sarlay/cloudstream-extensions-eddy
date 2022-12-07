@@ -10,7 +10,7 @@ import org.jsoup.nodes.Element
 
 
 class FrenchStreamProvider : MainAPI() {
-    override var mainUrl = "https://french-stream.land" //re ou ac ou city
+    override var mainUrl = "https://french-stream.day" //re ou ac ou city
     override var name = "FrenchStream"
     override val hasQuickSearch = false
     override val hasMainPage = true
