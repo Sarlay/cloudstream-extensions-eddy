@@ -5,13 +5,13 @@ dependencies {
 }
 
 // use an integer for version numbers
-version = 4
+version = 5
 
 
 cloudstream {
     // All of these properties are optional, you can safely remove them
 
-    description = "Add your IPTV account or alternatively, the automatic account will allow you to watch live (Sport, Movies,TvSeries ...)."
+    description = "Add your IPTV account or use the default account to watch Live TV, Movies,TvSeries ..."
     authors = listOf("Eddy")
 
     /**

@@ -188,7 +188,6 @@ class MacIPTVProvider : MainAPI() {
         idGenre: String,
         type: String,
         load: Boolean = true,
-        all: Boolean = false,
     ): Sequence<String> {
         val rgxFindJson =
             Regex("""\{[\s]*\"js\"(.*[\r\n]*)+\}""")
@@ -266,17 +265,9 @@ class MacIPTVProvider : MainAPI() {
                         }
                     }
                     else -> {
-                        val takeN = if (all) {
-                            ceil(x).toInt()
-                        } else {
-                            val nbr = ceil(x).toInt()
-                            if (nbr > 70) {
-                                70
-                            } else {
-                                nbr
-                            }
-                        }
-                        List(takeN - 1) { it + 2 }.apmap {
+                        val takeN = ceil(x).toInt()
+
+                        List(takeN ) { it + 1 }.apmap {
                             tryParseJson<RootVoDnSeries>(
                                 rgxFindJson.find(
                                     app.get(
@@ -403,17 +394,6 @@ class MacIPTVProvider : MainAPI() {
         val type: String?
         var all: String? = null
         when (queryCode.size) {
-            4 -> {
-                idGenre = queryCode[1]
-                type = when (queryCode[0].toIntOrNull()) {
-                    0 -> "itv"
-                    1 -> "vod"
-                    2 -> "series"
-                    else -> null
-                }
-                all = queryCode[2]
-                rquery = queryCode[3]
-            }
             3 -> {
                 idGenre = queryCode[1]
                 type = when (queryCode[0].toIntOrNull()) {
@@ -443,10 +423,9 @@ class MacIPTVProvider : MainAPI() {
                 idGenre.toString(),
                 type.toString(),
                 false,
-                all == "*" || rquery == "*"
             )
             val resSeq =
-                if (rquery.isNullOrBlank() || rquery == "*") {
+                if (rquery.isNullOrBlank()) {
                     arrayCh
                 } else {
                     arrayCh.sortedBy {
@@ -548,7 +527,7 @@ class MacIPTVProvider : MainAPI() {
                     TvType.Movie,
                     dataUrl = media.id,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
-                    plot = "For example to see all the content of the category (➋➌➒) from movie(code=➊), then go search ➊&➋➌➒&*. Others e.g. Want to search the movie \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B in ➋➌➒ => fast way but few outcomes: ➊&➋➌➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B or search in the whole category but long ➊&➋➌➒&*&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
+                    plot = "To see all the content of the section (➋➌➒) from movie(code=➊), then go search ➊&➋➌➒. To search the movie \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B write: ➊&➋➌➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
                 )
             }
             "account" -> { // how to create an iptv account
@@ -700,7 +679,7 @@ class MacIPTVProvider : MainAPI() {
                                     episode = 1,
                                     season = null,
                                     name = "Ⓣⓤⓣⓞ",
-                                    description = "For example to see all the content of the category (➋➌➒) from movie(code=➊), then go search ➊&➋➌➒&*. Others e.g. Want to search the movie \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B in ➋➌➒ => fast way but few outcomes: ➊&➋➌➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B or search in the whole category but long ➊&➋➌➒&*&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
+                                    description = "To see all the content of the section (➋➌➒) from movie(code=➊), then go search ➊&➋➌➒. To search the movie \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B write: ➊&➋➌➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
                                     posterUrl = "https://www.jharkhanditsolutions.com/wp-content/uploads/2020/07/GettyImages-1047578412-692fa117cf86450287d8873eeb1a95c8-aa8d654cec814174a9e07bdae85a1eb7.jpg",
                                 )
                             )
