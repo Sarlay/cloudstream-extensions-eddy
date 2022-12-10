@@ -188,11 +188,83 @@ class MacIPTVProvider : MainAPI() {
         idGenre: String,
         type: String,
         load: Boolean = true,
+        rquery: String = ""
     ): Sequence<String> {
         val rgxFindJson =
             Regex("""\{[\s]*\"js\"(.*[\r\n]*)+\}""")
         var res = sequenceOf<String>()
         when (type) {
+            "all" -> {
+                val url = "$mainUrl/portal.php?type=itv&action=get_all_channels"
+                tryParseJson<RootITV>(
+                    rgxFindJson.find(
+                        app.get(url, headers = headerMac).text
+                    )?.groupValues?.get(
+                        0
+                    )
+                )?.js?.data?.forEach { data ->
+
+                    if (FuzzySearch.ratio(data.name.toString(), rquery.lowercase()) > 40) {
+                        res += sequenceOf(
+                            Channel(
+                                data.name.toString(),
+                                "http://localhost/ch/${data.id}" + "_",
+                                data.logo?.replace("""\""", ""),
+                                "",
+                                data.id,
+                                data.tvGenreId,
+                                data.cmds[0].chId
+                            ).toJson()
+                        )
+                    }
+
+                }
+                List(2) { it + 1 }.apmap {
+                    listOf(
+                        "$mainUrl/portal.php?type=vod&action=get_ordered_list&p=$it&search=$rquery&sortby=added",
+                        "$mainUrl/portal.php?type=series&action=get_ordered_list&p=$it&search=$rquery&sortby=added"
+                    ).apmap { url ->
+                        tryParseJson<RootVoDnSeries>(
+                            rgxFindJson.find(
+                                app.get(
+                                    url,
+                                    headers = headerMac
+                                ).text
+                            )?.groupValues?.get(
+                                0
+                            )
+                        )?.js?.data!!.forEach { data ->
+                            val namedata = if (url.contains("type=vod")) {
+                                data.name.toString()
+                            } else {
+                                data.path.toString()
+                            }
+                            res += sequenceOf(
+                                Channel(
+                                    namedata,
+                                    data.cmd.toString(),
+                                    data.screenshotUri?.replace("""\""", ""),
+                                    "",
+                                    data.id,
+                                    data.categoryId,
+                                    data.id,
+                                    data.description,
+                                    data.actors,
+                                    if (data.year?.split("-")?.isNotEmpty() == true) {
+                                        data.year!!.split("-")[0]
+                                    } else {
+                                        data.year
+                                    },//2022-02-01
+                                    data.ratingIm,//2.3
+                                    1,
+                                    data.genresStr,
+                                    data.series,
+                                ).toJson()
+                            )
+                        }
+                    }
+                }
+            }
             "itv" -> {
                 val url = "$mainUrl/portal.php?type=itv&action=get_all_channels"
                 //"$mainUrl/portal.php?type=itv&action=get_ordered_list&genre=$idGenre&force_ch_link_check=&fav=0&sortby=number&hd=0&p=1"
@@ -219,7 +291,6 @@ class MacIPTVProvider : MainAPI() {
 
                 }
             }
-
             "vod", "series" -> {
                 val url =
                     "$mainUrl/portal.php?type=$type&action=get_ordered_list&category=$idGenre&movie_id=0&season_id=0&episode_id=0&p=1&sortby=added"
@@ -267,7 +338,7 @@ class MacIPTVProvider : MainAPI() {
                     else -> {
                         val takeN = ceil(x).toInt()
 
-                        List(takeN ) { it + 1 }.apmap {
+                        List(takeN) { it + 1 }.apmap {
                             tryParseJson<RootVoDnSeries>(
                                 rgxFindJson.find(
                                     app.get(
@@ -392,7 +463,6 @@ class MacIPTVProvider : MainAPI() {
         var rquery: String? = null
         val idGenre: String?
         val type: String?
-        var all: String? = null
         when (queryCode.size) {
             3 -> {
                 idGenre = queryCode[1]
@@ -413,6 +483,12 @@ class MacIPTVProvider : MainAPI() {
                     else -> null
                 }
             }
+            1 -> {
+                idGenre = "0"
+                type = "all"
+                rquery = query
+            }
+
             else -> {
                 return helpSearch()
             }
@@ -423,6 +499,7 @@ class MacIPTVProvider : MainAPI() {
                 idGenre.toString(),
                 type.toString(),
                 false,
+                rquery.toString()
             )
             val resSeq =
                 if (rquery.isNullOrBlank()) {
@@ -432,12 +509,12 @@ class MacIPTVProvider : MainAPI() {
                         val name =
                             cleanTitle(parseJson<Channel>(it).title).trim()
                         -FuzzySearch.ratio(name.lowercase(), rquery.toString().lowercase())
-                    }.take(50)
+                    }.take(100)
                 }.map {
                     val media = parseJson<Channel>(it)
                     val streamurl = CategorieInfo(
                         media.title,
-                        idGenre.toString(),
+                        media.tv_genre_id.toString(),
                         type.toString(),
                         media,
                     ).toJson()
@@ -466,7 +543,7 @@ class MacIPTVProvider : MainAPI() {
                         }
                     )
                     LiveSearchResponse(
-                        media.title,
+                        "[${media.tv_genre_id.toString()}]${media.title}",
                         streamurl,
                         name,
                         TvType.Live,
@@ -550,7 +627,8 @@ class MacIPTVProvider : MainAPI() {
                     dataUrl = media.id,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
                     plot = "ALL TAGS \uD83D\uDD0E $allCategory",
-                )
+
+                    )
             }
             "error" -> { // case where the provider don't work
                 return MovieLoadResponse(
@@ -561,8 +639,9 @@ class MacIPTVProvider : MainAPI() {
                     dataUrl = url,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
                     plot = "There is an issue with this account. Please see the tags and create an account. Otherwise check your credentials or change your DNS or use a VPN. In the worst case try with another account",
-                    comingSoon = true
-                )
+                    comingSoon = true,
+
+                    )
             }
             else -> {
                 val idGenre = media.id
