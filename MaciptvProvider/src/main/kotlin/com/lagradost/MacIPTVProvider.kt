@@ -13,9 +13,9 @@ import java.lang.Math.ceil
 
 class MacIPTVProvider : MainAPI() {
     private var defaulmacAdresse =
-        "mac=00:1A:79:aa:53:65"//"mac=00:1A:79:31:ed:e5"//"mac=00:1A:79:28:9C:Be"//"mac=00%3A1a%3A79%3Aae%3A2a%3A30"//
+        "mac=00:1A:79:31:ed:e5"//"mac=00:1A:79:aa:53:65"//"mac=00:1A:79:28:9C:Be"//"mac=00%3A1a%3A79%3Aae%3A2a%3A30"//
     private val defaultmainUrl =
-        "http://ky-iptv.com:25461/portalstb"//"http://nas.bordo1453.be"//"http://infinitymedia.live:8880"//"http://ultra-box.club"//
+        "http://nas.bordo1453.be"//"http://ky-iptv.com:25461/portalstb"//"http://infinitymedia.live:8880"//"http://ultra-box.club"//
     private var defaultname = "Test-Account MacIPTV"
     private var Basename = "MacIPTV \uD83D\uDCFA"
     override val hasQuickSearch = false
@@ -237,19 +237,19 @@ class MacIPTVProvider : MainAPI() {
                                 0
                             )
                         )?.js?.data!!.forEach { data ->
-                            val isMovie: Int
+                            val isMovie: String
                             val namedata = if (url.contains("type=vod")) {
-                                isMovie = 1
+                                isMovie = "&vod"
                                 data.name.toString()
 
                             } else {
-                                isMovie = 0
+                                isMovie = "&series"
                                 data.path.toString()
 
                             }
                             res += sequenceOf(
                                 Channel(
-                                    namedata,
+                                    namedata + isMovie,
                                     data.cmd.toString(),
                                     data.screenshotUri?.replace("""\""", ""),
                                     "",
@@ -264,7 +264,7 @@ class MacIPTVProvider : MainAPI() {
                                         data.year
                                     },//2022-02-01
                                     data.ratingIm,//2.3
-                                    isMovie,
+                                    1,
                                     data.genresStr,
                                     data.series,
                                 ).toJson()
@@ -437,7 +437,7 @@ class MacIPTVProvider : MainAPI() {
                     data.year
                 },//2022-02-01
                 data.ratingIm,//2.3
-                1,
+                0,
                 data.genresStr,
                 data.series,
             )
@@ -479,7 +479,7 @@ class MacIPTVProvider : MainAPI() {
         val queryCode = query.split("&")
         var rquery: String? = null
         val idGenre: String?
-        var type: String?
+        val type: String?
         when (queryCode.size) {
             3 -> {
                 idGenre = queryCode[1]
@@ -529,24 +529,23 @@ class MacIPTVProvider : MainAPI() {
                     }.take(100)
                 }.map {
                     val media = parseJson<Channel>(it)
-                    var typeM = type
-
-
+                    val titleM = media.title
+                    val typeM = if (type == "all") {
+                        when {
+                            titleM.contains("&vod") -> "vod"
+                            titleM.contains("&series") -> "series"
+                            else -> "itv"
+                        }
+                    } else {
+                        type.toString()
+                    }
                     val streamurl = CategorieInfo(
-                        media.title,
+                        titleM.replace("&vod", "").replace("&series", ""),
                         media.tv_genre_id.toString(),
-                        if (type == "all") {
-                            when (media.is_M) {
-                                1 -> "vod"
-                                0 -> "series"
-                                else -> "itv"
-                            }
-                        } else {
-                            type.toString()
-                        },
+                        typeM,
                         media,
                     ).toJson()
-                    val uppername = media.title.uppercase()
+                    val uppername = titleM.replace("&vod", "").replace("&series", "").uppercase()
                     val quality = getQualityFromString(
                         when (uppername.isNotBlank()) {
                             uppername.contains(findKeyWord("UHD")) -> {
@@ -571,7 +570,11 @@ class MacIPTVProvider : MainAPI() {
                         }
                     )
                     LiveSearchResponse(
-                        "[${media.tv_genre_id.toString()}]${getFlag(media.title)}",
+                        "[${media.tv_genre_id.toString()}]${
+                            getFlag(
+                                titleM.replace("&vod", "").replace("&series", "")
+                            )
+                        }",
                         streamurl,
                         name,
                         TvType.Live,
