@@ -203,8 +203,11 @@ class MacIPTVProvider : MainAPI() {
                         0
                     )
                 )?.js?.data?.forEach { data ->
-                    cleanTitle(data.name.toString())
-                    if (FuzzySearch.ratio(cleanTitle(data.name.toString()).lowercase(), rquery.lowercase()) > 40) {
+                    if (FuzzySearch.ratio(
+                            cleanTitleButKeepNumber(data.name.toString()).lowercase(),
+                            rquery.lowercase()
+                        ) > 40
+                    ) {
                         res += sequenceOf(
                             Channel(
                                 data.name.toString(),
@@ -234,10 +237,15 @@ class MacIPTVProvider : MainAPI() {
                                 0
                             )
                         )?.js?.data!!.forEach { data ->
+                            val isMovie: Int
                             val namedata = if (url.contains("type=vod")) {
+                                isMovie = 1
                                 data.name.toString()
+
                             } else {
+                                isMovie = 0
                                 data.path.toString()
+
                             }
                             res += sequenceOf(
                                 Channel(
@@ -256,7 +264,7 @@ class MacIPTVProvider : MainAPI() {
                                         data.year
                                     },//2022-02-01
                                     data.ratingIm,//2.3
-                                    1,
+                                    isMovie,
                                     data.genresStr,
                                     data.series,
                                 ).toJson()
@@ -305,11 +313,15 @@ class MacIPTVProvider : MainAPI() {
                 when (load) {
                     true -> {
                         getJs.data.forEach { data ->
-
+                            val isMovie: Int
                             val namedata = if (type == "vod") {
+                                isMovie = 1
                                 data.name.toString()
+
                             } else {
+                                isMovie = 0
                                 data.path.toString()
+
                             }
                             res += sequenceOf(
                                 Channel(
@@ -328,7 +340,7 @@ class MacIPTVProvider : MainAPI() {
                                         data.year
                                     },//2022-02-01
                                     data.ratingIm,//2.3
-                                    1,//isMovie
+                                    isMovie,//isMovie
                                     data.genresStr,// "Fantasy, Action, Adventure",
                                     data.series,
                                 ).toJson()
@@ -349,10 +361,15 @@ class MacIPTVProvider : MainAPI() {
                                     0
                                 )
                             )?.js?.data!!.forEach { data ->
+                                val isMovie: Int
                                 val namedata = if (type == "vod") {
+                                    isMovie = 1
                                     data.name.toString()
+
                                 } else {
+                                    isMovie = 0
                                     data.path.toString()
+
                                 }
                                 res += sequenceOf(
                                     Channel(
@@ -371,7 +388,7 @@ class MacIPTVProvider : MainAPI() {
                                             data.year
                                         },//2022-02-01
                                         data.ratingIm,//2.3
-                                        1,
+                                        isMovie,
                                         data.genresStr,
                                         data.series,
                                     ).toJson()
@@ -462,7 +479,7 @@ class MacIPTVProvider : MainAPI() {
         val queryCode = query.split("&")
         var rquery: String? = null
         val idGenre: String?
-        val type: String?
+        var type: String?
         when (queryCode.size) {
             3 -> {
                 idGenre = queryCode[1]
@@ -507,11 +524,19 @@ class MacIPTVProvider : MainAPI() {
                 } else {
                     arrayCh.sortedBy {
                         val name =
-                            cleanTitle(parseJson<Channel>(it).title).trim()
+                            cleanTitleButKeepNumber(parseJson<Channel>(it).title).trim()
                         -FuzzySearch.ratio(name.lowercase(), rquery.toString().lowercase())
                     }.take(100)
                 }.map {
                     val media = parseJson<Channel>(it)
+                    if (type == "all") {
+                        type = when (media.is_M) {
+                            1 -> "vod"
+                            0 -> "series"
+                            else -> "itv"
+                        }
+                    }
+
                     val streamurl = CategorieInfo(
                         media.title,
                         media.tv_genre_id.toString(),
@@ -543,7 +568,7 @@ class MacIPTVProvider : MainAPI() {
                         }
                     )
                     LiveSearchResponse(
-                        "[${media.tv_genre_id.toString()}]${media.title}",
+                        "[${media.tv_genre_id.toString()}]${getFlag(media.title)}",
                         streamurl,
                         name,
                         TvType.Live,
