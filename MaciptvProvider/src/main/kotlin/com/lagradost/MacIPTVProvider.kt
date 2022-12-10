@@ -529,18 +529,21 @@ class MacIPTVProvider : MainAPI() {
                     }.take(100)
                 }.map {
                     val media = parseJson<Channel>(it)
-                    if (type == "all") {
-                        type = when (media.is_M) {
-                            1 -> "vod"
-                            0 -> "series"
-                            else -> "itv"
-                        }
-                    }
+                    var typeM = type
+
 
                     val streamurl = CategorieInfo(
                         media.title,
                         media.tv_genre_id.toString(),
-                        type.toString(),
+                        if (type == "all") {
+                            when (media.is_M) {
+                                1 -> "vod"
+                                0 -> "series"
+                                else -> "itv"
+                            }
+                        } else {
+                            type.toString()
+                        },
                         media,
                     ).toJson()
                     val uppername = media.title.uppercase()
