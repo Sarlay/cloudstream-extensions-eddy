@@ -203,8 +203,8 @@ class MacIPTVProvider : MainAPI() {
                         0
                     )
                 )?.js?.data?.forEach { data ->
-
-                    if (FuzzySearch.ratio(data.name.toString(), rquery.lowercase()) > 40) {
+                    cleanTitle(data.name.toString())
+                    if (FuzzySearch.ratio(cleanTitle(data.name.toString()).lowercase(), rquery.lowercase()) > 40) {
                         res += sequenceOf(
                             Channel(
                                 data.name.toString(),
