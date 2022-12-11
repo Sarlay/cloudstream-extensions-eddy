@@ -27,6 +27,9 @@ class MacIPTVProvider : MainAPI() {
     private var key: String? = "" // key used in the header
     private var allCategory =
         listOf<String>() // even if we don't display all countries or categories, we need to know those avalaible
+    private var helpVid: String = ""
+    private var helpTag: String = ""
+    private var helpAcc: String = ""
 
     init {
         defaultname = "Test-Account $Basename "
@@ -162,6 +165,19 @@ class MacIPTVProvider : MainAPI() {
             "$mainUrl/portal.php?type=stb&action=get_modules",
             headers = headerMac
         ) // some providers need this request to work
+
+        listOf(
+            "https://github.com/Eddy976/cloudstream-extensions-eddy/issues/4",
+            "https://github.com/Eddy976/cloudstream-extensions-eddy/issues/3",
+            "https://github.com/Eddy976/cloudstream-extensions-eddy/issues/2",
+        ).apmap { url ->
+            when (url.takeLast(1)) {
+                "4" -> helpVid = app.get(url).document.select("video").attr("src")
+                "3" -> helpTag = app.get(url).document.select("video").attr("src")
+                "2" -> helpAcc = app.get(url).document.select("video").attr("src")
+                else -> ""
+            }
+        } //4 search
         isNotInit = false
     }
 
@@ -450,7 +466,7 @@ class MacIPTVProvider : MainAPI() {
             Pair(
                 "Find a media",
                 listOf(
-                    "https://user-images.githubusercontent.com/47984460/205964312-51454e77-eb8d-4dc3-9cb7-558fbd947be2.mp4",
+                    helpVid,
                     "https://www.jharkhanditsolutions.com/wp-content/uploads/2020/07/GettyImages-1047578412-692fa117cf86450287d8873eeb1a95c8-aa8d654cec814174a9e07bdae85a1eb7.jpg",
                     "search"
                 )
@@ -635,7 +651,7 @@ class MacIPTVProvider : MainAPI() {
                     TvType.Movie,
                     dataUrl = media.id,
                     posterUrl = "https://www.toutestpossible.be/wp-content/uploads/2017/05/comment-faire-des-choix-eclaires-en-10-etapes-01-300x167.jpg",
-                    plot = "To see all the content of the section (➋➌➒) from movie(code=➊), then go search ➊&➋➌➒. To search the movie \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B write: ➊&➋➌➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
+                    plot = "To see all the content of the section (➍➊➒) from movie(code=➊), then go search ➊&➍➊➒. To search the movie \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B in ➍➊➒ write: ➊&➍➊➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
                 )
             }
             "account" -> { // how to create an iptv account
@@ -678,7 +694,7 @@ class MacIPTVProvider : MainAPI() {
                 val idGenre = media.id
                 val isNothing = media.dataStream?.url.isNullOrBlank()
                 val dataUrl = if (isNothing) {
-                    "https://user-images.githubusercontent.com/47984460/205964312-51454e77-eb8d-4dc3-9cb7-558fbd947be2.mp4"
+                    helpVid
                 } else {
                     media.dataStream?.url.toString()
                 }
@@ -735,7 +751,7 @@ class MacIPTVProvider : MainAPI() {
                 }
 
                 val plot = if (isNothing) {
-                    "\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEE\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF4\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B \uD83D\uDC49 in recommendations"
+                    "ALL \uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEE\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF4\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B \uD83D\uDC49 search \uD83D\uDD0D ${media.title}"
                 } else {
                     media.dataStream?.description
                 }
@@ -782,14 +798,15 @@ class MacIPTVProvider : MainAPI() {
                                     )
                                 }
                             }.flatten()
-                        if (episodes.isEmpty()) {
+                        val isEmptyEp = episodes.isEmpty()
+                        if (isEmptyEp) {
                             episodes = listOf(
                                 Episode(
                                     dataUrl,
                                     episode = 1,
                                     season = null,
                                     name = "Ⓣⓤⓣⓞ",
-                                    description = "To see all the content of the section (➋➌➒) from movie(code=➊), then go search ➊&➋➌➒. To search the movie \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B write: ➊&➋➌➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
+                                    description = "To see all the content of the section (➍➊➒) from movie(code=➊), then go search ➊&➍➊➒. To search  \uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B in ➍➊➒ write: ➊&➍➊➒&\uD83C\uDDE6\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF3\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEC\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B",
                                     posterUrl = "https://www.jharkhanditsolutions.com/wp-content/uploads/2020/07/GettyImages-1047578412-692fa117cf86450287d8873eeb1a95c8-aa8d654cec814174a9e07bdae85a1eb7.jpg",
                                 )
                             )
@@ -806,7 +823,11 @@ class MacIPTVProvider : MainAPI() {
                             episodes,
                             media.dataStream?.url_image,
                             media.dataStream?.year?.toIntOrNull(),
-                            media.dataStream?.description,
+                            if (isEmptyEp) {
+                                "ALL \uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF7\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEE\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B \uD83D\uDC49 search \uD83D\uDD0D ${media.title}"
+                            } else {
+                                media.dataStream?.description
+                            },
                             null,
                             media.dataStream?.rating?.toIntOrNull(),
                             tags = media.dataStream?.genres_str?.split(","),
@@ -820,7 +841,7 @@ class MacIPTVProvider : MainAPI() {
                             val response = app.get(epg_url, headers = headerMac)
                             getEpg(response.text)
                         } else {
-                            "\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEE\u200B\u200B\u200B\u200B\u200B\uD83C\uDDE9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF4\u200B\u200B\u200B\u200B\u200B\uD83C\uDDF8\u200B\u200B\u200B\u200B\u200B \uD83D\uDC49 in recommendations"
+                            "ALL \uD83C\uDDF1\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEE\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B\uD83C\uDDEA\u200B\u200B\u200B\u200B\u200B \uD83C\uDDF9\u200B\u200B\u200B\u200B\u200B\uD83C\uDDFB\u200B\u200B\u200B\u200B\u200B \uD83D\uDC49 in recommendations or search \uD83D\uDD0D ${media.title}"
                         }
 
                         val title = media.title
@@ -855,7 +876,10 @@ class MacIPTVProvider : MainAPI() {
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): okhttp3.Response {
                 val request = chain.request()
-                if (request.url.toString().contains("token")) {
+                if (request.headers.get("Cookie")
+                        ?.contains("localhost") == true || request.headers.get("Cookie")
+                        ?.contains("ey") == true
+                ) {
                     val chID = request.headers.get("Cookie")
                     //val chID = Regex("""\/(\d*)\?""").find(request.url.toString())!!.groupValues[1] + "_"
                     val TokenLink = when {
@@ -1126,7 +1150,7 @@ class MacIPTVProvider : MainAPI() {
             Pair(
                 "Find your stable \uD83D\uDC64 \uD83C\uDD78\uD83C\uDD7F\uD83C\uDD83\uD83C\uDD85 Account",
                 listOf(
-                    "https://user-images.githubusercontent.com/47984460/204648696-1f7d18b8-6bf7-4392-9269-32c7b0e97403.mp4",
+                    helpAcc,
                     "https://userguiding.com/wp-content/uploads/2021/06/best-help-center-software.jpg",
                     "account"
                 )
@@ -1161,7 +1185,7 @@ class MacIPTVProvider : MainAPI() {
             Pair(
                 "Find your stable \uD83D\uDC64 \uD83C\uDD78\uD83C\uDD7F\uD83C\uDD83\uD83C\uDD85 Account",
                 listOf(
-                    "https://user-images.githubusercontent.com/47984460/204648696-1f7d18b8-6bf7-4392-9269-32c7b0e97403.mp4",
+                    helpAcc,
                     "https://userguiding.com/wp-content/uploads/2021/06/best-help-center-software.jpg",
                     "account"
                 )
@@ -1169,7 +1193,7 @@ class MacIPTVProvider : MainAPI() {
             Pair(
                 "\uD83D\uDD0E Your TAG Account (to filter)",
                 listOf(
-                    "https://user-images.githubusercontent.com/47984460/204643246-405e7a7b-544e-4389-a78e-395c3876e06d.mp4",
+                    helpTag,
                     "https://ctcgulf.com/wp-content/uploads/2016/05/business9-600x400.jpg",
                     "tags"
                 )
@@ -1234,7 +1258,11 @@ class MacIPTVProvider : MainAPI() {
                 val idGenre = it.data
                 val title = it.name
                 val catInfo = CategorieInfo(
-                    title,
+                    when (type) {
+                        "itv" -> "0&$idGenre"
+                        "vod" -> "1&$idGenre"
+                        else -> "2&$idGenre"
+                    },
                     idGenre,
                     type,
                 )
@@ -1370,3 +1398,4 @@ class MacIPTVProvider : MainAPI() {
 
     }
 }
+
