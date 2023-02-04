@@ -119,7 +119,7 @@ class NekosamaProvider : MainAPI() {
      **/
     override suspend fun search(query: String): List<SearchResponse> {
 
-        var listofResults = ArrayList<SearchResponse>()
+        val listofResults = ArrayList<SearchResponse>()
 
         listOf(
             "$mainUrl/animes-search-vf.json" to "(VF) ",
@@ -176,6 +176,7 @@ class NekosamaProvider : MainAPI() {
 
     }
 
+
     /**
      * charge la page d'informations, il ya toutes les donées, les épisodes, le résumé etc ...
      * Il faut retourner soit: AnimeLoadResponse, MovieLoadResponse, TorrentLoadResponse, TvSeriesLoadResponse.
@@ -198,13 +199,15 @@ class NekosamaProvider : MainAPI() {
         var dataUrl = ""
         var link_video = ""
         /////////////////////////////////////
+
         results.forEach { infoEpisode ->
             val episodeScript = infoEpisode.groupValues[1]
             val srcScriptEpisode =
                 Regex("""episode\"\:\"Ep\. ([0-9]*)\"""")
-            val episodeNum = srcScriptEpisode.find(episodeScript)?.groupValues?.get(1)?.toInt()
+            val episodeNum =
+                srcScriptEpisode.find(episodeScript)?.groupValues?.get(1)?.toIntOrNull()
             val srcScriptTitle = Regex("""title\"\:\"([^\"]*)\"\,\"url\"\:\"\\\/anime""")
-            var titleE = srcScriptTitle.find(episodeScript)?.groupValues?.get(1)
+            val titleE = srcScriptTitle.find(episodeScript)?.groupValues?.get(1)
             if (titleE != null) title = titleE
             val srcScriptlink =
                 Regex("""\"url\"\:\"([^\"]*)\"""") // remove\
@@ -214,9 +217,7 @@ class NekosamaProvider : MainAPI() {
 
             val srcScriptposter =
                 Regex("""\"url_image\"\:\"([^\"]*)\"""") // remove\
-            val poster = srcScriptposter.find(episodeScript)?.groupValues?.get(1)
-            var link_poster = ""
-            if (poster != null) link_poster = poster.replace("\\", "")
+            //val poster = srcScriptposter.find(episodeScript)?.groupValues?.get(1)
             dataUrl = link_video
 
 
@@ -224,9 +225,6 @@ class NekosamaProvider : MainAPI() {
                 Episode(
                     link_video,
                     episode = episodeNum,
-                    name = title,
-                    posterUrl = link_poster
-
                 )
             )
 
@@ -275,6 +273,7 @@ class NekosamaProvider : MainAPI() {
                 )
                 this.showStatus = status
                 this.year = year
+                //addMalId(malId?.toIntOrNull())
 
             }
         }
@@ -290,7 +289,7 @@ class NekosamaProvider : MainAPI() {
     ): Boolean {
         val url = data
         val document = app.get(url).document
-        val script = document.select("""[type^="text"]""")[1]
+        val script = document.select("""[type^="text"]""")[2]
         val srcAllvideolinks =
             Regex("""\'(https:\/\/[^']*)""")
 
@@ -298,7 +297,7 @@ class NekosamaProvider : MainAPI() {
 
         results.forEach { infoEpisode ->
 
-            var playerUrl = infoEpisode.groupValues[1]
+            val playerUrl = infoEpisode.groupValues[1]
 
             if (!playerUrl.isNullOrBlank())
                 loadExtractor(
@@ -392,7 +391,7 @@ class NekosamaProvider : MainAPI() {
             ) {
                 this.posterUrl = posterUrl
                 addDubStatus(
-                    isDub = lang?.contains("vf")==true,
+                    isDub = lang?.contains("vf") == true,
                     episodes = Regex("""Ep[\.][\s]+(\d*)""").find(type)?.groupValues?.get(1)
                         ?.toIntOrNull()
                 )
@@ -408,10 +407,11 @@ class NekosamaProvider : MainAPI() {
             ) {
                 this.posterUrl = posterUrl
                 addDubStatus(
-                    isDub = lang?.contains("vf")==true,
+                    isDub = lang?.contains("vf") == true,
                     episodes = Regex("""(\d*) Eps""").find(type)?.groupValues?.get(1)
                         ?.toIntOrNull()
-                )            }
+                )
+            }
         }
     }
 
