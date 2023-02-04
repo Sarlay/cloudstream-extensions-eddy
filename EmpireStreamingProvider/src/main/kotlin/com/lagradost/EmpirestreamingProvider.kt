@@ -16,7 +16,7 @@ import kotlinx.coroutines.runBlocking
 class EmpirestreamingProvider : MainAPI() {
 
 
-    override var mainUrl = "https://empire-streaming.co"
+    override var mainUrl = "https://empire-streaming.eu"
     override var name = "\uD83D\uDC51 Empire-Streaming \uD83D\uDC51"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
     override val hasMainPage = true // page d'accueil (optionel mais encoragé)
