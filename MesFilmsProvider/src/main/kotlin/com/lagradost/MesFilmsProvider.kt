@@ -54,7 +54,7 @@ class MesFilmsProvider : MainAPI() {
                 val title = div.selectFirst("> div.details > div.title > a")?.text().toString()
 
                 when (type) {
-                    "Film" -> (
+                    "FILM" -> (
                             newMovieSearchResponse( // réponse du film qui sera ajoutée à la liste map qui sera ensuite return
                                 title,
                                 href,
@@ -66,21 +66,8 @@ class MesFilmsProvider : MainAPI() {
                                 // this.rating = rating
                             }
                             )
-                    /*"TV" -> (
-                            newTvSeriesSearchResponse(
-                                title,
-                                href,
-                                TvType.TvSeries,
-                                false
-                            ) {
-                                this.posterUrl = mediaPoster
-
-                                // this.rating = rating
-                            }
-                            )
-                    */
                     else -> {
-                        throw ErrorLoadingException("invalid media type") // le type n'est pas reconnu ==> affiche une erreur
+                        return@mapNotNull null // le type n'est pas reconnu ==> enlever
                     }
                 }
             }
@@ -114,13 +101,15 @@ class MesFilmsProvider : MainAPI() {
 
         val description = extra.select("span.tagline").first()?.text() // first() selectione le premier élément de la liste
 
-        val rating = data.select("div.dt_rating_data > div.starstruck-rating > span.dt_rating_vgs").first()?.text()?.let {
-            if (it == "0.0" || it.isBlank()) {
-                null
-            } else {
-                it
-            }
+        val rating1 = document.select("div.custom_fields > span.valor > b#repimdb > strong").text()
+        val rating2 = document.select("div.custom_fields > span.valor > strong").text()
+
+        val rating = when {
+            !rating1.isNullOrBlank() -> rating1
+            !rating2.isNullOrBlank() -> rating2
+            else -> null
         }
+
 
         val date = extra.select("span.date").first()?.text()?.takeLast(4) // prends les 4 dernier chiffres
 
@@ -158,7 +147,12 @@ class MesFilmsProvider : MainAPI() {
 
 
         if (mediaType == "movie") {
-            return newMovieLoadResponse(title, url, TvType.Movie, url) { // retourne les informations du film
+            return newMovieLoadResponse(
+                title,
+                url,
+                TvType.Movie,
+                url
+            ) { // retourne les informations du film
                 this.posterUrl = poster
                 addRating(rating)
                 this.year = date?.toIntOrNull()
@@ -180,7 +174,6 @@ class MesFilmsProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
-        val parsedInfo = tryParseJson<EpisodeData>(data)
         val document = app.get(data).document
 
         document.select("ul#playeroptionsul > li:not(#player-option-trailer)").apmap { li -> // séléctione tous les players sauf celui avec l'id player-option-trailer
@@ -188,20 +181,38 @@ class MesFilmsProvider : MainAPI() {
             val quality = li.selectFirst("span.title")?.text()
             val server = li.selectFirst("> span.server")?.text()
             val languageInfo =
-                li.selectFirst("span.flag > img")?.attr("data-src")?.substringAfterLast("/") // séléctione la partie de la chaine de caractère apr_s le dernier /
+
+                li.selectFirst("span.flag > img")?.attr("data-src")
+                    ?.substringAfterLast("/") // séléctione la partie de la chaine de caractère apr_s le dernier /
                     ?.replace(".png", "") ?: ""
+
             val postId = li.attr("data-post")
 
             val indexOfPlayer = li.attr("data-nume")
 
             // un api est disponible sur le site pour récupéré les liens vers des embed (iframe) type uqload
-            val payloadRequest = mapOf("action" to "doo_player_ajax", "post" to postId, "nume" to indexOfPlayer, "type" to "movie")
+            val payloadRequest = mapOf(
+                "action" to "doo_player_ajax",
+                "post" to postId,
+                "nume" to indexOfPlayer,
+                "type" to "movie"
+            )
+
+
             val getPlayerEmbed =
-                app.post("$mainUrl/wp-admin/admin-ajax.php", headers = mapOf("Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8"), data = payloadRequest).text
+                app.post(
+                    "$mainUrl/wp-admin/admin-ajax.php",
+                    headers = mapOf("Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8"),
+                    data = payloadRequest
+                ).text
             val playerUrl = parseJson<EmbedUrlClass>(getPlayerEmbed).url // récupère l'url de l'embed en lisant le json
 
             if (playerUrl != null)
-                loadExtractor(httpsify(playerUrl), playerUrl, subtitleCallback) { link -> // charge un extracteur d'extraire le lien direct .mp4
+                loadExtractor(
+                    httpsify(playerUrl),
+                    playerUrl,
+                    subtitleCallback
+                ) { link -> // charge un extracteur d'extraire le lien direct .mp4
                     callback.invoke(ExtractorLink( // ici je modifie le callback pour ajouter des informations, normalement ce n'est pas nécessaire
                         link.source,
                         link.name + " $languageInfo",
@@ -220,21 +231,52 @@ class MesFilmsProvider : MainAPI() {
     }
 
 
+    override val mainPage = mainPageOf(
+        Pair("$mainUrl/film/", "Récemment ajouté"),
+        Pair("$mainUrl/tendance/?get=movies", "Tendance"),
+        Pair("$mainUrl/evaluations/?get=movies", "Les plus notés"),
+        Pair("$mainUrl/films-classiques/", "Quelques classiques"),
+    )
+
     override suspend fun getMainPage(
         page: Int,
-        request : MainPageRequest
+        request: MainPageRequest
     ): HomePageResponse {
-        val document = app.get("$mainUrl/tendance/?get=movies").document
+        val document = app.get(request.data).document
         val movies = document.select("div.items > article.movies")
-        val categoryTitle = document.select("div.content > header > h1").text().replaceFirstChar { it.uppercase() }
+        val categoryTitle = request.name
         val returnList = movies.mapNotNull { article ->
-            // map est la même chose que apmap (mais apmap est plus rapide)
             // ici si un élément est null, il sera automatiquement enlevé de la liste
             val poster = article.select("div.poster")
             val posterUrl = poster.select("> img").attr("data-src")
-            val quality = getQualityFromString(poster.select("> div.mepo > span.quality").text())
-            // val rating = poster.select("> div.rating").text()
-            //val link = poster.select("> a")?.attr("href")
+            val qualityExtracted = poster.select("> div.mepo > span.quality").text().uppercase()
+
+            val quality = getQualityFromString(
+                when (!qualityExtracted.isNullOrBlank()) {
+                    qualityExtracted.contains("WEBRIP") -> {
+                        "WebRip"
+                    }
+                    qualityExtracted.contains("HDRIP") -> {
+                        "HD"
+                    }
+                    qualityExtracted.contains("HDLIGHT") -> {
+                        "HD"
+                    }
+                    qualityExtracted.contains("BDRIP") -> {
+                        "BlueRay"
+                    }
+                    qualityExtracted.contains("DVD") -> {
+                        "DVD"
+                    }
+                    qualityExtracted.contains("CAM") -> {
+                        "Cam"
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
+            )
 
             val data = article.select("div.data")
             val title = data.select("> h3 > a").text()
@@ -249,7 +291,7 @@ class MesFilmsProvider : MainAPI() {
                 this.quality = quality
             }
         }
-        if (returnList.isEmpty()) throw ErrorLoadingException("No movies found in the main page")
+        if (returnList.isEmpty()) throw ErrorLoadingException("No movies")
         return HomePageResponse(
             listOf(
                 HomePageList(categoryTitle, returnList)
