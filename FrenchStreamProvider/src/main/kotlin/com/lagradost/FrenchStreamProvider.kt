@@ -4,48 +4,21 @@ package com.lagradost
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.extractorApis
+import com.lagradost.cloudstream3.utils.loadExtractor
 import org.jsoup.nodes.Element
 
 
 class FrenchStreamProvider : MainAPI() {
-    override var mainUrl = "https://french-stream.blue" //re ou ac ou city
+    override var mainUrl = "https://streem.re" //re ou ac ou city
     override var name = "FrenchStream"
     override val hasQuickSearch = false
     override val hasMainPage = true
     override var lang = "fr"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
-    private var isNotInit = true
-
-    suspend fun initMainUrl() {
-        try {
-            val document = app.get(mainUrl).document
-            val newMainUrl = document.select("link[rel*=\"canonical\"]").attr("href")
-            if (!newMainUrl.isNullOrBlank() && newMainUrl.contains("french-stream")) {
-                mainUrl = newMainUrl
-            } else {
-                // if the clone feature didn't work with then get the url from a file
-
-                app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json")
-                    .parsed<ArrayList<mediaData>>().forEach {
-                        if (it.title.contains("french-stream", ignoreCase = true)) {
-                            mainUrl = it.url
-                        }
-                    }
-            }
-        } catch (e: Exception) { // url changed
-            app.get("https://raw.githubusercontent.com/Eddy976/cloudstream-extensions-eddy/ressources/fetchwebsite.json")
-                .parsed<ArrayList<mediaData>>().forEach {
-                    if (it.title.contains("french-stream", ignoreCase = true)) {
-                        mainUrl = it.url
-                    }
-                }
-
-        }
-        if (mainUrl.endsWith("/")) mainUrl.dropLast(1)
-        isNotInit = false
-    }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val link = "$mainUrl/?do=search&subaction=search&story=$query" // search'
@@ -54,7 +27,7 @@ class FrenchStreamProvider : MainAPI() {
         val results = document.select("div#dle-content > > div.short")
 
         val allresultshome =
-            results.apmap { article ->  // avec mapnotnull si un élément est null, il sera automatiquement enlevé de la liste
+            results.mapNotNull { article ->  // avec mapnotnull si un élément est null, il sera automatiquement enlevé de la liste
                 article.toSearchResponse()
             }
         return allresultshome
@@ -73,17 +46,17 @@ class FrenchStreamProvider : MainAPI() {
                 } else {
                     "Vostfr"
                 }
-                "Episode " + type
+                "Episode $type"
             } else {
                 a.text()
             }
 
             Episode(
-                fixUrl(url).plus("-episodenumber:$epNum") + if (epTitle.contains("Vostfr")) {
-                    "*vostfr*"
-                } else {
-                    ""
-                },
+                loadLinkData(
+                    fixUrl(url),
+                    epTitle.contains("Vostfr"),
+                    epNum,
+                ).toJson(),
                 epTitle,
                 null,
                 epNum,
@@ -91,6 +64,12 @@ class FrenchStreamProvider : MainAPI() {
             )
         }
     }
+
+    data class loadLinkData(
+        val embedUrl: String,
+        val isVostFr: Boolean? = null,
+        val episodenumber: Int? = null,
+    )
 
     override suspend fun load(url: String): LoadResponse {
         val soup = app.get(url).document
@@ -113,7 +92,7 @@ class FrenchStreamProvider : MainAPI() {
                 ?.mapNotNull {   // all the tags like action, thriller ...; unused variable
                     it?.text()
                 }
-            return newMovieLoadResponse(title, url, TvType.Movie, url) {
+            return newMovieLoadResponse(title, url, TvType.Movie, loadLinkData(url)) {
                 this.posterUrl = poster
                 this.year = year?.toIntOrNull()
                 this.tags = tagsList
@@ -162,29 +141,25 @@ class FrenchStreamProvider : MainAPI() {
     }
 
 
-    override suspend fun loadLinks(
+    override suspend fun loadLinks( // TODO FIX *Garbage* data transmission betwenn function
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
+        val parsedData =  tryParseJson<loadLinkData>(data)
+        val url = parsedData?.embedUrl ?: return false
         val servers =
-            if (data.contains("-episodenumber:"))// It's a serie:
+            if (parsedData.episodenumber != null)// It's a serie:
             {
-                val isvostfr = data.endsWith("*vostfr*")
+                val isvostfr = parsedData.isVostFr == true
 
-                val split =
-                    if (isvostfr) {
-                        data.dropLast(8).split("-episodenumber:")
-                    } else {
-                        data.split("-episodenumber:")
-                    } // the data contains the url and the wanted episode number (a temporary dirty fix that will last forever)
-                val url = split[0]
+
                 val wantedEpisode =
-                    if (split[1] == "2") { // the episode number 2 has id of ABCDE, don't ask any question
+                    if (parsedData.episodenumber.toString() == "2") { // the episode number 2 has id of ABCDE, don't ask any question
                         "ABCDE"
                     } else {
-                        "episode" + split[1]
+                        "episode" + parsedData.episodenumber.toString()
                     }
 
 
@@ -202,7 +177,7 @@ class FrenchStreamProvider : MainAPI() {
 //                            val litext = li.text()
                             if (serverUrl.isNotBlank()) {
                                 if (li.text().replace("&nbsp;", "").replace(" ", "").isNotBlank()) {
-                                    Pair(li.text().replace(" ", ""), "vf" + fixUrl(serverUrl))
+                                    Pair(li.text().replace(" ", ""), fixUrl(serverUrl))
                                 } else {
                                     null
                                 }
@@ -211,14 +186,14 @@ class FrenchStreamProvider : MainAPI() {
                             }
                         }
 
-                val translated = translate(split[1], serversvf.isNotEmpty())
+                val translated = translate(parsedData.episodenumber.toString(), serversvf.isNotEmpty())
                 val serversvo =  // Original version servers
                     soup.select("div#$translated > div.selink > ul.btnss $div> li")
                         .mapNotNull { li ->
                             val serverUrl = fixUrlNull(li.selectFirst("a")?.attr("href"))
                             if (!serverUrl.isNullOrEmpty()) {
                                 if (li.text().replace("&nbsp;", "").isNotBlank()) {
-                                    Pair(li.text().replace(" ", ""), "vo" + fixUrl(serverUrl))
+                                    Pair(li.text().replace(" ", ""), fixUrl(serverUrl))
                                 } else {
                                     null
                                 }
@@ -233,7 +208,7 @@ class FrenchStreamProvider : MainAPI() {
                 }
             } else {  // it's a movie
                 val movieServers =
-                    app.get(fixUrl(data)).document.select("nav#primary_nav_wrap > ul > li > ul > li > a")
+                    app.get(fixUrl(url)).document.select("nav#primary_nav_wrap > ul > li > ul > li > a")
                         .mapNotNull { a ->
                             val serverurl = fixUrlNull(a.attr("href")) ?: return@mapNotNull null
                             val parent = a.parents()[2]
@@ -246,33 +221,19 @@ class FrenchStreamProvider : MainAPI() {
                         }
                 movieServers
             }
-
         servers.apmap {
-            for (extractor in extractorApis) {
-                var playerName = it.first
+            val urlplayer = it.second
 
-                if (playerName.contains("Stream.B")) {
-                    playerName = it.first.replace("Stream.B", "StreamSB")
-                }
-                if (it.second.contains("streamlare")) {
-                    playerName = "Streamlare"
-                }
-                if (playerName.contains(extractor.name, ignoreCase = true)) {
-                    val header = app.get(
-                        "https" + it.second.split("https").get(1),
-                        allowRedirects = false
-                    ).headers
-                    val urlplayer = it.second
-                    val playerUrl = when (!urlplayer.isNullOrEmpty()) {
-                        urlplayer.contains("opsktp.com") -> header.get("location")
-                            .toString() // case where there is redirection to opsktp
-
-                        else -> it.second
-                    }
-                    extractor.getSafeUrl(playerUrl, playerUrl, subtitleCallback, callback)
-                    break
-                }
-            }
+            val playerUrl = if (urlplayer.contains("opsktp.com") || urlplayer.contains("flixeo.xyz")) {
+                val header = app.get(
+                    "https" + it.second.split("https")[1],
+                    allowRedirects = false
+                ).headers
+                header["location"].toString()
+            } else {
+                urlplayer
+            }.replace("https://doodstream.com", "https://dood.yt")
+            loadExtractor(playerUrl, mainUrl, subtitleCallback, callback)
         }
 
         return true
@@ -308,7 +269,7 @@ class FrenchStreamProvider : MainAPI() {
             )
 
 
-        } else  // an Serie
+        } else  // a Serie
         {
             return newAnimeSearchResponse(
                 name = title,
@@ -333,18 +294,17 @@ class FrenchStreamProvider : MainAPI() {
     )
 
     override val mainPage = mainPageOf(
-        Pair("/xfsearch/version-film/page/", "Derniers films"),
-        Pair("/xfsearch/version-serie/page/", "Derniers séries"),
-        Pair("/film/arts-martiaux/page/", "Films za m'ringué (Arts martiaux)"),
-        Pair("/film/action/page/", "Films Actions"),
-        Pair("/film/romance/page/", "Films za malomo (Romance)"),
-        Pair("/serie/aventure-serie/page/", "Série aventure"),
-        Pair("/film/documentaire/page/", "Documentaire")
+        Pair("/xfsearch/version-film/page/", "Derniers Films"),
+        Pair("/xfsearch/version-serie/page/", "Dernieres Séries"),
+        Pair("/film/arts-martiaux/page/", "Films Arts martiaux"),
+        Pair("/film/action/page/", "Films Action"),
+        Pair("/film/romance/page/", "Films Romance"),
+        Pair("/serie/aventure-serie/page/", "Séries aventure"),
+        Pair("/film/documentaire/page/", "Documentaires")
 
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        if (isNotInit) initMainUrl()
         val url = mainUrl + request.data + page
         val document = app.get(url).document
         val movies = document.select("div#dle-content > div.short")
